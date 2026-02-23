@@ -1179,10 +1179,19 @@ async function todoPage(request, env) {
     <title>📋 TodoList</title>
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
     <script>
-        // 阻塞渲染直到 VConsole 加载完成
-        if (typeof VConsole !== 'undefined') {
-            window.vConsole = new VConsole();
-        }
+        // 等待 VConsole 加载完成
+        (function() {
+            var checkVConsole = function() {
+                if (typeof VConsole !== 'undefined') {
+                    window.vConsole = new VConsole();
+                    console.log('[VConsole] 初始化成功');
+                } else {
+                    console.log('[VConsole] 等待加载...');
+                    setTimeout(checkVConsole, 100);
+                }
+            };
+            checkVConsole();
+        })();
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -2219,10 +2228,6 @@ async function todoPage(request, env) {
                 if (e.key === 'Escape') {
                     document.body.removeChild(overlay);
                     document.removeEventListener('keydown', handleEsc);
-                }
-            };
-            document.addEventListener('keydown', handleEsc);
-        }
                 }
             };
             document.addEventListener('keydown', handleEsc);
