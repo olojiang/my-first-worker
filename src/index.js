@@ -2554,7 +2554,7 @@ async function apiTodos(request, env) {
     }
 
     // POST /api/todos/migrate - 迁移旧数据，将 user_id 为空的设置为 olojiang (2581485)
-    if (method === 'POST' && path === '/api/todos/migrate') {
+    if ((method === 'POST' || method === 'GET') && path === '/api/todos/migrate') {
       // 更新所有 user_id 为 NULL 的记录，设置为 olojiang 的 ID
       const updateResult = await env.DB.prepare(
         "UPDATE todos SET user_id = 2581485, user_login = 'olojiang' WHERE user_id IS NULL AND user_login IS NULL"
