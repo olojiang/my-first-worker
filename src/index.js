@@ -1832,7 +1832,8 @@ async function todoPage(request, env) {
                     tagsHtml += '</div>';
                 }
                 
-                html += '<div class="todo-item ' + (todo.done ? 'completed' : '') + '" data-id="' + todo.id + '" onclick="selectTodo(this)">' +
+                const itemClass = todo.done ? 'todo-item completed' : 'todo-item';
+                html += '<div class="' + itemClass + '" data-id="' + todo.id + '" onclick="selectTodo(this)">' +
                     '<div class="todo-actions" onclick="event.stopPropagation();">' +
                         '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
                         '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
