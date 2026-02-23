@@ -396,7 +396,7 @@ async function homePage(request, env) {
     </div>
   ` : `
     <a href="/auth/login" style="background: rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; font-weight: 500;">
-      🔐 GitHub 登录
+      <i class="fab fa-github"></i> GitHub 登录
     </a>
   `;
   
@@ -407,6 +407,7 @@ async function homePage(request, env) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloudflare Worker 功能演示中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
     <script>new VConsole();</script>
     <style>
@@ -1176,6 +1177,7 @@ async function todoPage(request, env) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>📋 TodoList</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
     <script>new VConsole();</script>
     <style>
@@ -1399,7 +1401,7 @@ async function todoPage(request, env) {
         }
         
         .checkbox.checked::after {
-            content: '✓';
+            content: '\f00c';
             color: white;
             font-size: 14px;
             font-weight: bold;
@@ -1523,10 +1525,10 @@ async function todoPage(request, env) {
 <body>
     <div class="container">
         <div class="header">
-            <h1>📋 TodoList</h1>
+            <h1><i class="fas fa-clipboard-list"></i> TodoList</h1>
             <p>记录你的待办事项</p>
             ${userSection}
-            <a href="/tags" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;">🏷️ 标签管理</a>
+            <a href="/tags" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
         </div>
         
         <div class="stats">
@@ -1792,9 +1794,9 @@ async function todoPage(request, env) {
                         '<div class="todo-time">' + timeStr + '</div>' +
                     '</div>' +
                     '<div class="todo-actions">' +
-                        '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">✏️</button>' +
-                        '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">📋</button>' +
-                        '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">×</button>' +
+                        '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
+                        '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
+                        '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-times"></i></button>' +
                     '</div>' +
                 '</div>';
             });
@@ -2131,6 +2133,7 @@ function tagsPage() {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🏷️ 标签管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
     <script>new VConsole();</script>
     <style>
@@ -2345,8 +2348,8 @@ function tagsPage() {
 <body>
     <div class="container">
         <div class="header">
-            <a href="/todos" class="back-link">← 返回</a>
-            <h1>🏷️ 标签管理</h1>
+            <a href="/todos" class="back-link"><i class="fas fa-arrow-left"></i> 返回</a>
+            <h1><i class="fas fa-tags"></i> 标签管理</h1>
         </div>
         
         <div class="input-section">
@@ -2399,7 +2402,7 @@ function tagsPage() {
             const listEl = document.getElementById('tags-list');
             
             if (tags.length === 0) {
-                listEl.innerHTML = '<h2>所有标签</h2><div class="empty-state"><div class="empty-state-icon">🏷️</div><div>暂无标签，添加一个吧！</div></div>';
+                listEl.innerHTML = '<h2>所有标签</h2><div class="empty-state"><div class="empty-state-icon"><i class="fas fa-tags" style="font-size: 64px; opacity: 0.5;"></i></div><div>暂无标签，添加一个吧！</div></div>';
                 return;
             }
             
@@ -2412,7 +2415,7 @@ function tagsPage() {
                 
                 html += '<div class="tag-item" data-tag="' + escapeHtml(tagName) + '" style="' + bgStyle + '">' + 
                     escapeHtml(tagName) + 
-                    '<span class="tag-delete" data-index="' + index + '">×</span>' +
+                    '<span class="tag-delete" data-index="' + index + '"><i class="fas fa-times"></i></span>' +
                     '</div>';
             });
             
