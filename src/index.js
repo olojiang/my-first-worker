@@ -1654,33 +1654,119 @@ async function todoPage(request, env) {
         
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('页面加载完成，开始加载数据...');
-            loadTodos();
-            loadTags();
+            console.log('[初始化] DOMContentLoaded 事件触发');
+            console.log('[初始化] 当前时间:', new Date().toISOString());
+            
+            // 检查关键元素是否存在
+            const todoListEl = document.getElementById('todo-list');
+            const tagsSelectEl = document.getElementById('tags-select');
+            const filterTagsEl = document.getElementById('filter-tags');
+            
+            console.log('[初始化] todo-list 元素:', todoListEl ? '存在' : '不存在');
+            console.log('[初始化] tags-select 元素:', tagsSelectEl ? '存在' : '不存在');
+            console.log('[初始化] filter-tags 元素:', filterTagsEl ? '存在' : '不存在');
+            
+            console.log('[初始化] 开始加载数据...');
+            
+            // 设置加载超时检查
+            setTimeout(() => {
+                console.log('[初始化] 5秒检查 - todos 长度:', todos.length);
+                console.log('[初始化] 5秒检查 - allTags 长度:', allTags.length);
+                if (todos.length === 0) {
+                    console.warn('[初始化] 警告: 5秒后仍未加载到 todos');
+                }
+            }, 5000);
+            
+            try {
+                console.log('[初始化] 调用 loadTodos()');
+                loadTodos();
+            } catch (e) {
+                console.error('[初始化] loadTodos() 出错:', e);
+            }
+            
+            try {
+                console.log('[初始化] 调用 loadTags()');
+                loadTags();
+            } catch (e) {
+                console.error('[初始化] loadTags() 出错:', e);
+            }
             
             // 绑定添加按钮点击事件
-            document.getElementById('add-btn').addEventListener('click', addTodo);
+            try {
+                const addBtn = document.getElementById('add-btn');
+                if (addBtn) {
+                    addBtn.addEventListener('click', addTodo);
+                    console.log('[初始化] 添加按钮事件绑定成功');
+                } else {
+                    console.error('[初始化] 添加按钮不存在');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定添加按钮出错:', e);
+            }
             
             // 绑定 AI 优化按钮
-            document.getElementById('ai-optimize-btn').addEventListener('click', optimizeTodoText);
+            try {
+                const aiBtn = document.getElementById('ai-optimize-btn');
+                if (aiBtn) {
+                    aiBtn.addEventListener('click', optimizeTodoText);
+                    console.log('[初始化] AI优化按钮事件绑定成功');
+                } else {
+                    console.error('[初始化] AI优化按钮不存在');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定AI优化按钮出错:', e);
+            }
             
             // Ctrl+Enter 添加
-            document.getElementById('todo-input').addEventListener('keydown', (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                    addTodo();
+            try {
+                const todoInput = document.getElementById('todo-input');
+                if (todoInput) {
+                    todoInput.addEventListener('keydown', (e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                            addTodo();
+                        }
+                    });
+                    console.log('[初始化] 输入框键盘事件绑定成功');
+                } else {
+                    console.error('[初始化] 输入框不存在');
                 }
-            });
+            } catch (e) {
+                console.error('[初始化] 绑定输入框事件出错:', e);
+            }
             
             // 绑定搜索输入
-            document.getElementById('search-input').addEventListener('input', (e) => {
-                searchKeyword = e.target.value.trim();
-                renderTodos();
-            });
+            try {
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        searchKeyword = e.target.value.trim();
+                        renderTodos();
+                    });
+                    console.log('[初始化] 搜索输入事件绑定成功');
+                } else {
+                    console.error('[初始化] 搜索输入框不存在');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定搜索输入出错:', e);
+            }
             
             // 绑定筛选按钮
-            document.getElementById('filter-all').addEventListener('click', () => setFilter('all'));
-            document.getElementById('filter-pending').addEventListener('click', () => setFilter('pending'));
-            document.getElementById('filter-completed').addEventListener('click', () => setFilter('completed'));
+            try {
+                ['filter-all', 'filter-pending', 'filter-completed'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) {
+                        const filterType = id.replace('filter-', '');
+                        btn.addEventListener('click', () => setFilter(filterType));
+                        console.log('[初始化] 筛选按钮 ' + id + ' 绑定成功');
+                    } else {
+                        console.error('[初始化] 筛选按钮 ' + id + ' 不存在');
+                    }
+                });
+            } catch (e) {
+                console.error('[初始化] 绑定筛选按钮出错:', e);
+            }
+            
+            console.log('[初始化] DOMContentLoaded 处理完成');
         });
         
         let currentFilter = 'pending'; // 默认筛选未完成的
@@ -1761,20 +1847,36 @@ async function todoPage(request, env) {
         
         // 加载标签列表
         async function loadTags() {
-            console.log('开始加载标签列表...');
+            console.log('[loadTags] 开始加载标签列表...');
+            console.log('[loadTags] 当前 allTags 长度:', allTags.length);
+            
             try {
+                console.log('[loadTags] 发起 fetch 请求: /api/tags');
+                const startTime = Date.now();
                 const response = await fetch('/api/tags');
-                console.log('标签列表响应:', response.status);
+                const endTime = Date.now();
+                console.log('[loadTags] 请求耗时:', endTime - startTime, 'ms');
+                console.log('[loadTags] 响应状态:', response.status, response.statusText);
+                
+                console.log('[loadTags] 开始解析 JSON...');
                 const data = await response.json();
-                console.log('标签列表数据:', data);
+                console.log('[loadTags] 解析完成, 数据:', data);
+                console.log('[loadTags] 返回的 tags 数量:', data.tags ? data.tags.length : 0);
                 
                 if (data.success) {
                     allTags = data.tags || [];
+                    console.log('[loadTags] 更新 allTags 数组, 新长度:', allTags.length);
+                    console.log('[loadTags] 调用 renderTagSelect()');
                     renderTagSelect();
+                    console.log('[loadTags] 调用 renderFilterTags()');
                     renderFilterTags();
+                    console.log('[loadTags] 加载完成');
+                } else {
+                    console.warn('[loadTags] 响应中 success 为 false:', data.error);
                 }
             } catch (e) {
-                console.error('加载标签失败:', e);
+                console.error('[loadTags] 加载失败:', e);
+                console.error('[loadTags] 错误堆栈:', e.stack);
             }
         }
         
@@ -1832,22 +1934,41 @@ async function todoPage(request, env) {
         
         // 加载待办列表
         async function loadTodos() {
-            console.log('开始加载待办列表...');
+            console.log('[loadTodos] 开始加载待办列表...');
+            console.log('[loadTodos] 当前 todos 长度:', todos.length);
+            
             try {
+                console.log('[loadTodos] 发起 fetch 请求: /api/todos');
+                const startTime = Date.now();
                 const response = await fetch('/api/todos');
-                console.log('待办列表响应:', response.status);
+                const endTime = Date.now();
+                console.log('[loadTodos] 请求耗时:', endTime - startTime, 'ms');
+                console.log('[loadTodos] 响应状态:', response.status, response.statusText);
+                
+                console.log('[loadTodos] 开始解析 JSON...');
                 const data = await response.json();
-                console.log('待办列表数据:', data);
+                console.log('[loadTodos] 解析完成, 数据:', data);
+                console.log('[loadTodos] 返回的 todos 数量:', data.todos ? data.todos.length : 0);
                 
                 if (data.todos) {
                     todos = data.todos;
+                    console.log('[loadTodos] 更新 todos 数组, 新长度:', todos.length);
+                    console.log('[loadTodos] 调用 renderTodos()');
                     renderTodos();
+                    console.log('[loadTodos] 调用 updateStats()');
                     updateStats();
+                    console.log('[loadTodos] 加载完成');
+                } else {
+                    console.warn('[loadTodos] 响应中没有 todos 数据');
                 }
             } catch (e) {
-                console.error('加载待办失败:', e);
+                console.error('[loadTodos] 加载失败:', e);
+                console.error('[loadTodos] 错误堆栈:', e.stack);
                 showToast('加载失败: ' + e.message, 'error');
-                document.getElementById('todo-list').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">加载失败，请刷新重试</div></div>';
+                const todoListEl = document.getElementById('todo-list');
+                if (todoListEl) {
+                    todoListEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">加载失败，请刷新重试</div></div>';
+                }
             }
         }
         
