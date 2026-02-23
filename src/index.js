@@ -1177,9 +1177,14 @@ async function todoPage(request, env) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>📋 TodoList</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
-    <script>new VConsole();</script>
+    <script>
+        // 阻塞渲染直到 VConsole 加载完成
+        if (typeof VConsole !== 'undefined') {
+            window.vConsole = new VConsole();
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
