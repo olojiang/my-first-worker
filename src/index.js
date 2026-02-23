@@ -1358,11 +1358,94 @@ function todoPage() {
                         tagsHtml +
                         '<div class="todo-time">' + timeStr + '</div>' +
                     '</div>' +
-                    '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')">×</button>' +
+                    '<div class="todo-actions" style="display: flex; gap: 8px; align-items: center;">' +
+                        '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;">✏️</button>' +
+                        '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;">📋</button>' +
+                        '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;">×</button>' +
+                    '</div>' +
                 '</div>';
             });
             
             listEl.innerHTML = html;
+            
+            // 绑定复制按钮事件
+            listEl.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    copyTodoText(id);
+                });
+            });
+            
+            // 绑定编辑按钮事件
+            listEl.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    editTodo(id);
+                });
+            });
+        }
+        
+        // 编辑待办
+        function editTodo(id) {
+            const todo = todos.find(t => t.id === id);
+            if (!todo) return;
+            
+            const newText = prompt('编辑待办事项:', todo.text);
+            if (newText === null) return; // 用户取消
+            
+            const trimmedText = newText.trim();
+            if (!trimmedText) {
+                showToast('待办事项不能为空', 'error');
+                return;
+            }
+            
+            if (trimmedText === todo.text) {
+                return; // 内容未改变
+            }
+            
+            // 发送更新请求
+            fetch('/api/todos/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: trimmedText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    todo.text = trimmedText;
+                    renderTodos();
+                    showToast('编辑成功！');
+                } else {
+                    showToast(data.error || '编辑失败', 'error');
+                }
+            })
+            .catch(e => {
+                showToast('编辑失败: ' + e.message, 'error');
+            });
+        }
+        
+        // 复制待办内容
+        async function copyTodoText(id) {
+            const todo = todos.find(t => t.id === id);
+            if (!todo) return;
+            
+            const textToCopy = todo.text;
+            
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                showToast('已复制到剪贴板！');
+            } catch (e) {
+                // 降级方案
+                const textarea = document.createElement('textarea');
+                textarea.value = textToCopy;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('已复制到剪贴板！');
+            }
         }
         
         // 更新统计
@@ -1749,7 +1832,7 @@ function tagsPage() {
         <div class="input-section">
             <div class="input-group">
                 <input type="text" class="tag-input" id="tag-input" placeholder="输入新标签名称..." maxlength="20">
-                <button class="add-btn" id="add-btn" onclick="addTag()">添加</button>
+                <button class="add-btn" id="add-btn">添加</button>
             </div>
         </div>
         
@@ -1766,16 +1849,7 @@ function tagsPage() {
     <script>
         let tags = [];
         
-        document.addEventListener('DOMContentLoaded', () => {
-            loadTags();
-            
-            document.getElementById('tag-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    addTag();
-                }
-            });
-        });
-        
+        // 先定义所有函数，再添加事件监听
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -1810,17 +1884,28 @@ function tagsPage() {
             }
             
             let html = '<h2>所有标签</h2>';
-            tags.forEach(tag => {
-                html += '<div class="tag-item">' + escapeHtml(tag) + '<span class="tag-delete" onclick="deleteTag(\'' + escapeHtml(tag) + '\')">×</span></div>';
+            tags.forEach((tag, index) => {
+                html += '<div class="tag-item" data-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '<span class="tag-delete" data-index="' + index + '">×</span></div>';
             });
             
             listEl.innerHTML = html;
+            
+            // 绑定删除按钮点击事件
+            listEl.querySelectorAll('.tag-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tag = e.target.closest('.tag-item').dataset.tag;
+                    deleteTag(tag);
+                });
+            });
         }
         
         async function addTag() {
+            console.log('addTag called');
             const input = document.getElementById('tag-input');
             const btn = document.getElementById('add-btn');
             const name = input.value.trim();
+            
+            console.log('Input value:', name);
             
             if (!name) {
                 showToast('请输入标签名称', 'error');
@@ -1831,13 +1916,16 @@ function tagsPage() {
             btn.textContent = '添加中...';
             
             try {
+                console.log('Sending request...');
                 const response = await fetch('/api/tags', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name })
                 });
                 
+                console.log('Response received:', response.status);
                 const data = await response.json();
+                console.log('Data:', data);
                 
                 if (data.success) {
                     input.value = '';
@@ -1848,6 +1936,7 @@ function tagsPage() {
                     showToast(data.error || '添加失败', 'error');
                 }
             } catch (e) {
+                console.error('Error:', e);
                 showToast('添加失败: ' + e.message, 'error');
             } finally {
                 btn.disabled = false;
@@ -1882,6 +1971,20 @@ function tagsPage() {
             div.textContent = text;
             return div.innerHTML;
         }
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTags();
+            
+            // 绑定添加按钮点击事件
+            document.getElementById('add-btn').addEventListener('click', addTag);
+            
+            document.getElementById('tag-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addTag();
+                }
+            });
+        });
     </script>
 </body>
 </html>
