@@ -2493,10 +2493,30 @@ async function apiTodos(request, env) {
       return jsonResponse({ success: true, todo });
     }
     
-    // PUT /api/todos/:id - 更新待办
+    // PUT /api/todos/:id - 更新待办（只能更新自己的）
     if (method === 'PUT' && path.match(/^\/api\/todos\/\d+$/)) {
       const id = parseInt(path.split('/').pop());
       const body = await request.json();
+      
+      // 先检查待办是否存在且属于当前用户
+      const checkResult = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
+      const existingTodo = checkResult.results?.[0];
+      
+      if (!existingTodo) {
+        return jsonResponse({ success: false, error: '待办不存在' }, 404);
+      }
+      
+      // 验证权限：只能修改自己的待办
+      if (currentUser) {
+        const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
+        const currentUserId = currentUser.login || currentUser.id.toString();
+        if (todoOwner && todoOwner !== currentUserId) {
+          return jsonResponse({ success: false, error: '无权修改此待办' }, 403);
+        }
+      } else {
+        // 未登录用户不能修改任何待办
+        return jsonResponse({ success: false, error: '请先登录' }, 401);
+      }
       
       if (typeof body.done !== 'undefined') {
         await env.DB.prepare('UPDATE todos SET done = ? WHERE id = ?').bind(body.done ? 1 : 0, id).run();
@@ -2512,9 +2532,30 @@ async function apiTodos(request, env) {
       return jsonResponse({ success: true, todo });
     }
     
-    // DELETE /api/todos/:id - 删除待办
+    // DELETE /api/todos/:id - 删除待办（只能删除自己的）
     if (method === 'DELETE' && path.match(/^\/api\/todos\/\d+$/)) {
       const id = parseInt(path.split('/').pop());
+      
+      // 先检查待办是否存在且属于当前用户
+      const checkResult = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
+      const existingTodo = checkResult.results?.[0];
+      
+      if (!existingTodo) {
+        return jsonResponse({ success: false, error: '待办不存在' }, 404);
+      }
+      
+      // 验证权限：只能删除自己的待办
+      if (currentUser) {
+        const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
+        const currentUserId = currentUser.login || currentUser.id.toString();
+        if (todoOwner && todoOwner !== currentUserId) {
+          return jsonResponse({ success: false, error: '无权删除此待办' }, 403);
+        }
+      } else {
+        // 未登录用户不能删除任何待办
+        return jsonResponse({ success: false, error: '请先登录' }, 401);
+      }
+      
       await env.DB.prepare('DELETE FROM todos WHERE id = ?').bind(id).run();
       return jsonResponse({ success: true });
     }
