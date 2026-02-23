@@ -1198,6 +1198,16 @@ function todoPage() {
             </div>
         </div>
         
+        <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <span style="font-size: 14px; color: #666;">筛选:</span>
+                <button id="filter-all" class="filter-btn active" style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 20px; cursor: pointer; font-size: 13px;">全部</button>
+                <button id="filter-pending" class="filter-btn" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">未完成</button>
+                <button id="filter-completed" class="filter-btn" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">已完成</button>
+            </div>
+            <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
+        </div>
+        
         <div class="export-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center;">
             <button class="export-btn" onclick="exportTodos()" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
                 📥 导出数据 (JSON)
@@ -1246,7 +1256,40 @@ function todoPage() {
                     addTodo();
                 }
             });
+            
+            // 绑定筛选按钮
+            document.getElementById('filter-all').addEventListener('click', () => setFilter('all'));
+            document.getElementById('filter-pending').addEventListener('click', () => setFilter('pending'));
+            document.getElementById('filter-completed').addEventListener('click', () => setFilter('completed'));
         });
+        
+        let currentFilter = 'pending'; // 默认筛选未完成的
+        
+        // 设置筛选
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // 更新按钮样式
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.style.background = '#f0f0f0';
+                btn.style.color = '#666';
+            });
+            
+            const activeBtn = document.getElementById('filter-' + filter);
+            activeBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)';
+            activeBtn.style.color = 'white';
+            
+            renderTodos();
+        }
+        
+        // 检查是否是今天创建的
+        function isToday(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            return date.getDate() === today.getDate() &&
+                   date.getMonth() === today.getMonth() &&
+                   date.getFullYear() === today.getFullYear();
+        }
         
         // 加载标签列表
         async function loadTags() {
@@ -1332,14 +1375,30 @@ function todoPage() {
         function renderTodos() {
             const listEl = document.getElementById('todo-list');
             
-            if (todos.length === 0) {
+            // 筛选待办
+            let filteredTodos = todos;
+            
+            if (currentFilter === 'pending') {
+                // 显示未完成的 + 今天已完成的
+                filteredTodos = todos.filter(todo => {
+                    if (!todo.done) return true; // 未完成的都显示
+                    if (isToday(todo.created_at)) return true; // 今天完成的也显示
+                    return false;
+                });
+            } else if (currentFilter === 'completed') {
+                // 只显示已完成的
+                filteredTodos = todos.filter(todo => todo.done);
+            }
+            // 'all' 显示全部
+            
+            if (filteredTodos.length === 0) {
                 listEl.innerHTML = '<h2>📝 待办事项</h2><div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">暂无待办事项，添加一个吧！</div></div>';
                 return;
             }
             
             let html = '<h2>📝 待办事项</h2>';
             
-            todos.forEach(todo => {
+            filteredTodos.forEach(todo => {
                 const date = new Date(todo.created_at);
                 const timeStr = date.toLocaleString('zh-CN', { 
                     month: 'short', 
