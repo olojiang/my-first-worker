@@ -1798,6 +1798,16 @@ async function todoPage(request, env) {
             }
             // 'all' 显示全部
             
+            // 排序：先按完成状态（未完成在前），再按时间逆序
+            filteredTodos.sort((a, b) => {
+                // 完成状态不同，未完成的在前
+                if (a.done !== b.done) {
+                    return a.done ? 1 : -1;
+                }
+                // 完成状态相同，按时间逆序（新的在前）
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+            
             if (filteredTodos.length === 0) {
                 listEl.innerHTML = '<h2>📝 待办事项</h2><div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">暂无待办事项，添加一个吧！</div></div>';
                 return;
