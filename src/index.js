@@ -1829,10 +1829,10 @@ async function todoPage(request, env) {
                 
                 const itemClass = todo.done ? 'todo-item completed' : 'todo-item';
                 html += '<div class="' + itemClass + '" data-id="' + todo.id + '" onclick="selectTodo(this)">' +
-                    '<div class="todo-actions" onclick="event.stopPropagation();">' +
-                        '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
-                        '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
-                        '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-times"></i></button>' +
+                    '<div class="todo-actions">' +
+                        '<button class="edit-btn" onclick="event.stopPropagation(); editTodo(' + todo.id + ')" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
+                        '<button class="copy-btn" onclick="event.stopPropagation(); copyTodoText(' + todo.id + ')" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
+                        '<button class="delete-btn" onclick="event.stopPropagation(); deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-times"></i></button>' +
                     '</div>' +
                     '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' +
                     '<div class="todo-content">' +
@@ -1844,22 +1844,6 @@ async function todoPage(request, env) {
             });
             
             listEl.innerHTML = html;
-            
-            // 绑定复制按钮事件
-            listEl.querySelectorAll('.copy-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = parseInt(e.target.dataset.id);
-                    copyTodoText(id);
-                });
-            });
-            
-            // 绑定编辑按钮事件
-            listEl.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = parseInt(e.target.dataset.id);
-                    editTodo(id);
-                });
-            });
         }
         
         // 选中 todo 项（移动端用）
