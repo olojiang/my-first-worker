@@ -1589,6 +1589,17 @@ async function todoPage(request, env) {
         </div>
         
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                <input type="text" id="search-input" placeholder="搜索待办内容..." style="flex: 1; padding: 10px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none;">
+                <button onclick="clearFilters()" style="padding: 10px 20px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;"><i class="fas fa-times"></i> 清除</button>
+            </div>
+            <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                <span style="font-size: 14px; color: #666;">筛选标签:</span>
+                <span style="font-size: 12px; color: #999;">加载中...</span>
+            </div>
+        </div>
+        
+        <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <span style="font-size: 14px; color: #666;">筛选:</span>
                 <button id="filter-all" class="filter-btn active" style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 20px; cursor: pointer; font-size: 13px;">全部</button>
@@ -1633,6 +1644,8 @@ async function todoPage(request, env) {
         let todos = [];
         let selectedTags = [];
         let allTags = [];
+        let filterTags = []; // 筛选用的标签
+        let searchKeyword = ''; // 搜索关键词
         
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', () => {
@@ -1651,6 +1664,12 @@ async function todoPage(request, env) {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     addTodo();
                 }
+            });
+            
+            // 绑定搜索输入
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                searchKeyword = e.target.value.trim();
+                renderTodos();
             });
             
             // 绑定筛选按钮
@@ -1687,6 +1706,54 @@ async function todoPage(request, env) {
                    date.getFullYear() === today.getFullYear();
         }
         
+        // 渲染筛选标签
+        function renderFilterTags() {
+            const container = document.getElementById('filter-tags');
+            
+            if (allTags.length === 0) {
+                container.innerHTML = '<span style="font-size: 14px; color: #666;">筛选标签:</span><span style="font-size: 12px; color: #999;">暂无标签</span>';
+                return;
+            }
+            
+            let html = '<span style="font-size: 14px; color: #666;">筛选标签:</span>';
+            
+            allTags.forEach(tag => {
+                const tagName = typeof tag === 'object' ? tag.name : tag;
+                const tagColor = typeof tag === 'object' ? tag.color : null;
+                const isSelected = filterTags.includes(tagName);
+                
+                if (isSelected) {
+                    html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + '; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                } else if (tagColor) {
+                    html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: white; border: 1px solid transparent; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                } else {
+                    html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 切换筛选标签
+        function toggleFilterTag(tagName) {
+            if (filterTags.includes(tagName)) {
+                filterTags = filterTags.filter(t => t !== tagName);
+            } else {
+                filterTags.push(tagName);
+            }
+            renderFilterTags();
+            renderTodos();
+        }
+        
+        // 清除所有筛选
+        function clearFilters() {
+            searchKeyword = '';
+            filterTags = [];
+            document.getElementById('search-input').value = '';
+            renderFilterTags();
+            renderTodos();
+        }
+        
         // 加载标签列表
         async function loadTags() {
             console.log('开始加载标签列表...');
@@ -1699,6 +1766,7 @@ async function todoPage(request, env) {
                 if (data.success) {
                     allTags = data.tags || [];
                     renderTagSelect();
+                    renderFilterTags();
                 }
             } catch (e) {
                 console.error('加载标签失败:', e);
@@ -1797,6 +1865,22 @@ async function todoPage(request, env) {
                 filteredTodos = todos.filter(todo => todo.done);
             }
             // 'all' 显示全部
+            
+            // 标签筛选
+            if (filterTags.length > 0) {
+                filteredTodos = filteredTodos.filter(todo => {
+                    if (!todo.tags || todo.tags.length === 0) return false;
+                    // 只要包含任一选中的标签就显示
+                    return filterTags.some(filterTag => todo.tags.includes(filterTag));
+                });
+            }
+            
+            // 搜索筛选
+            if (searchKeyword) {
+                filteredTodos = filteredTodos.filter(todo => {
+                    return todo.text.toLowerCase().includes(searchKeyword.toLowerCase());
+                });
+            }
             
             // 排序：先按完成状态（未完成在前），再按时间逆序
             filteredTodos.sort((a, b) => {
