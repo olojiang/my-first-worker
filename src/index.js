@@ -138,7 +138,7 @@ export default {
       case '/api/tags':
         return apiTags(request, env);
       default:
-        if (path.startsWith('/api/todos/')) {
+        if (path.startsWith('/api/todos/') || path === '/api/todos/migrate') {
           return apiTodos(request, env);
         }
         if (path.startsWith('/api/tags/')) {
@@ -2422,11 +2422,11 @@ async function apiTodos(request, env) {
         )
       `).run();
       
-      // 尝试添加 user_id 列（如果表已存在但缺少该列）
+      // 尝试添加 user_login 列（用于存储用户登录名）
       try {
-        await env.DB.prepare('ALTER TABLE todos ADD COLUMN user_id INTEGER').run();
+        await env.DB.prepare('ALTER TABLE todos ADD COLUMN user_login TEXT').run();
       } catch (alterErr) {
-        // 列已存在或表刚创建，忽略错误
+        // 列已存在，忽略错误
       }
       
       // 尝试添加 tags 列（如果表已存在但缺少该列）
@@ -2443,20 +2443,22 @@ async function apiTodos(request, env) {
     if (method === 'GET' && path === '/api/todos') {
       let result;
       if (currentUser) {
-        // 只获取当前用户的待办
-        result = await env.DB.prepare('SELECT * FROM todos WHERE user_id = ? ORDER BY created_at DESC')
-          .bind(currentUser.id)
+        // 优先使用 user_login 匹配，同时兼容 user_id
+        result = await env.DB.prepare(
+          'SELECT * FROM todos WHERE user_login = ? OR (user_login IS NULL AND user_id = ?) ORDER BY created_at DESC'
+        )
+          .bind(currentUser.login, currentUser.id)
           .all();
       } else {
-        // 未登录时获取所有待办（或可以返回空数组）
-        result = await env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC').all();
+        // 未登录时返回空数组（或可以获取所有待办）
+        result = { results: [] };
       }
       const todos = (result.results || []).map(todo => ({
         ...todo,
         tags: todo.tags ? JSON.parse(todo.tags) : []
       }));
-      return jsonResponse({ 
-        success: true, 
+      return jsonResponse({
+        success: true,
         todos: todos,
         user: currentUser ? { id: currentUser.id, login: currentUser.login } : null
       });
@@ -2472,12 +2474,13 @@ async function apiTodos(request, env) {
         return jsonResponse({ success: false, error: '待办事项不能为空' }, 400);
       }
       
-      // 获取当前用户ID
+      // 获取当前用户信息
       const userId = currentUser ? currentUser.id : null;
+      const userLogin = currentUser ? currentUser.login : null;
       
-      // 插入数据 - 包含 user_id
-      await env.DB.prepare('INSERT INTO todos (text, tags, user_id) VALUES (?, ?, ?)')
-        .bind(text, JSON.stringify(tags), userId)
+      // 插入数据 - 包含 user_id 和 user_login
+      await env.DB.prepare('INSERT INTO todos (text, tags, user_id, user_login) VALUES (?, ?, ?, ?)')
+        .bind(text, JSON.stringify(tags), userId, userLogin)
         .run();
       
       // 获取刚插入的数据
@@ -2547,6 +2550,26 @@ async function apiTodos(request, env) {
           'Content-Disposition': `attachment; filename="${filename}"`,
           'Access-Control-Allow-Origin': '*'
         }
+      });
+    }
+
+    // POST /api/todos/migrate - 迁移旧数据，将 user_id 为空的设置为 olojiang (2581485)
+    if (method === 'POST' && path === '/api/todos/migrate') {
+      // 更新所有 user_id 为 NULL 的记录，设置为 olojiang 的 ID
+      const updateResult = await env.DB.prepare(
+        "UPDATE todos SET user_id = 2581485, user_login = 'olojiang' WHERE user_id IS NULL AND user_login IS NULL"
+      ).run();
+      
+      // 获取更新后的统计
+      const statsResult = await env.DB.prepare(
+        'SELECT COUNT(*) as total, SUM(CASE WHEN user_id = 2581485 THEN 1 ELSE 0 END) as olojiang_count FROM todos'
+      ).all();
+      
+      return jsonResponse({
+        success: true,
+        message: 'Migration completed',
+        updated: updateResult.meta?.changes || 0,
+        stats: statsResult.results?.[0] || {}
       });
     }
     
