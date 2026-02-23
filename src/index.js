@@ -1390,7 +1390,8 @@ async function todoPage(request, env) {
                 display: none;
                 justify-content: center;
                 margin-left: 0;
-                margin-top: 10px;
+                margin-top: 6px;
+                margin-bottom: 6px;
                 opacity: 0;
                 max-width: 99%;
             }
