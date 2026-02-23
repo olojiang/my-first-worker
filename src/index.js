@@ -1332,6 +1332,7 @@ async function todoPage(request, env) {
             animation: slideIn 0.3s ease;
             flex-wrap: wrap;
             gap: 10px;
+            position: relative;
         }
         
         .todo-actions {
@@ -1340,6 +1341,14 @@ async function todoPage(request, env) {
             align-items: center;
             flex-wrap: wrap;
             margin-left: auto;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .todo-item:hover .todo-actions {
+            opacity: 1;
+            visibility: visible;
         }
         
         @media (max-width: 480px) {
@@ -1352,6 +1361,8 @@ async function todoPage(request, env) {
                 margin-left: 0;
                 margin-top: 10px;
                 justify-content: flex-end;
+                opacity: 1;
+                visibility: visible;
             }
         }
         
