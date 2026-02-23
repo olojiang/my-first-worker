@@ -1598,6 +1598,22 @@ async function todoPage(request, env) {
             </div>
         </div>
         
+        <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button id="toggle-multi-select" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">
+                <i class="fas fa-check-square"></i> 多选
+            </button>
+            <button id="batch-complete" style="padding: 8px 16px; border: none; background: #4ade80; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
+                <i class="fas fa-check"></i> 完成
+            </button>
+            <button id="batch-delete" style="padding: 8px 16px; border: none; background: #ff6b6b; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
+                <i class="fas fa-trash"></i> 删除
+            </button>
+            <button id="batch-cancel" style="padding: 8px 16px; border: none; background: #e0e0e0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
+                <i class="fas fa-times"></i> 取消
+            </button>
+            <span id="selected-count" style="font-size: 14px; color: #666; display: none;">已选 0 项</span>
+        </div>
+        
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
                 <input type="text" id="search-input" placeholder="搜索待办内容..." style="flex: 1; padding: 10px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none;">
@@ -1656,6 +1672,8 @@ async function todoPage(request, env) {
         let allTags = [];
         let filterTags = []; // 筛选用的标签
         let searchKeyword = ''; // 搜索关键词
+        let selectedTodos = []; // 多选选中的 todo ID 列表
+        let isMultiSelectMode = false; // 是否处于多选模式
         
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', () => {
@@ -1771,8 +1789,158 @@ async function todoPage(request, env) {
                 console.error('[初始化] 绑定筛选按钮出错:', e);
             }
             
+            // 绑定多选按钮
+            try {
+                const toggleMultiBtn = document.getElementById('toggle-multi-select');
+                const batchCompleteBtn = document.getElementById('batch-complete');
+                const batchDeleteBtn = document.getElementById('batch-delete');
+                const batchCancelBtn = document.getElementById('batch-cancel');
+                
+                if (toggleMultiBtn) {
+                    toggleMultiBtn.addEventListener('click', toggleMultiSelectMode);
+                    console.log('[初始化] 多选按钮绑定成功');
+                }
+                if (batchCompleteBtn) {
+                    batchCompleteBtn.addEventListener('click', batchComplete);
+                    console.log('[初始化] 批量完成按钮绑定成功');
+                }
+                if (batchDeleteBtn) {
+                    batchDeleteBtn.addEventListener('click', batchDelete);
+                    console.log('[初始化] 批量删除按钮绑定成功');
+                }
+                if (batchCancelBtn) {
+                    batchCancelBtn.addEventListener('click', exitMultiSelectMode);
+                    console.log('[初始化] 批量取消按钮绑定成功');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定多选按钮出错:', e);
+            }
+            
             console.log('[初始化] DOMContentLoaded 处理完成');
         });
+        
+        // 切换多选模式
+        function toggleMultiSelectMode() {
+            isMultiSelectMode = !isMultiSelectMode;
+            selectedTodos = [];
+            updateBatchButtons();
+            renderTodos();
+            console.log('[多选] 模式切换:', isMultiSelectMode ? '开启' : '关闭');
+        }
+        
+        // 退出多选模式
+        function exitMultiSelectMode() {
+            isMultiSelectMode = false;
+            selectedTodos = [];
+            updateBatchButtons();
+            renderTodos();
+            console.log('[多选] 退出多选模式');
+        }
+        
+        // 更新批量操作按钮显示
+        function updateBatchButtons() {
+            const toggleBtn = document.getElementById('toggle-multi-select');
+            const completeBtn = document.getElementById('batch-complete');
+            const deleteBtn = document.getElementById('batch-delete');
+            const cancelBtn = document.getElementById('batch-cancel');
+            const countSpan = document.getElementById('selected-count');
+            
+            if (isMultiSelectMode) {
+                toggleBtn.style.display = 'none';
+                completeBtn.style.display = 'inline-block';
+                deleteBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'inline-block';
+                countSpan.style.display = 'inline';
+                countSpan.textContent = '已选 ' + selectedTodos.length + ' 项';
+            } else {
+                toggleBtn.style.display = 'inline-block';
+                completeBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+                countSpan.style.display = 'none';
+            }
+        }
+        
+        // 切换 todo 选中状态
+        function toggleTodoSelection(todoId) {
+            if (selectedTodos.includes(todoId)) {
+                selectedTodos = selectedTodos.filter(id => id !== todoId);
+            } else {
+                selectedTodos.push(todoId);
+            }
+            updateBatchButtons();
+            renderTodos();
+            console.log('[多选] 选中项:', selectedTodos);
+        }
+        
+        // 批量完成
+        async function batchComplete() {
+            if (selectedTodos.length === 0) {
+                showToast('请先选择待办事项', 'error');
+                return;
+            }
+            
+            showToast('正在批量完成...');
+            let successCount = 0;
+            
+            for (const todoId of selectedTodos) {
+                try {
+                    const response = await fetch('/api/todos/' + todoId, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ done: true })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        successCount++;
+                        const todo = todos.find(t => t.id === todoId);
+                        if (todo) todo.done = true;
+                    }
+                } catch (e) {
+                    console.error('[批量完成] 失败:', todoId, e);
+                }
+            }
+            
+            renderTodos();
+            updateStats();
+            showToast('已完成 ' + successCount + ' 项');
+            exitMultiSelectMode();
+        }
+        
+        // 批量删除
+        async function batchDelete() {
+            if (selectedTodos.length === 0) {
+                showToast('请先选择待办事项', 'error');
+                return;
+            }
+            
+            if (!confirm('确定要删除选中的 ' + selectedTodos.length + ' 个待办事项吗？')) {
+                return;
+            }
+            
+            showToast('正在批量删除...');
+            let successCount = 0;
+            
+            for (const todoId of selectedTodos) {
+                try {
+                    const response = await fetch('/api/todos/' + todoId, {
+                        method: 'DELETE'
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        successCount++;
+                        todos = todos.filter(t => t.id !== todoId);
+                    }
+                } catch (e) {
+                    console.error('[批量删除] 失败:', todoId, e);
+                }
+            }
+            
+            renderTodos();
+            updateStats();
+            showToast('已删除 ' + successCount + ' 项');
+            exitMultiSelectMode();
+        }
         
         let currentFilter = 'pending'; // 默认筛选未完成的
         
@@ -2054,13 +2222,22 @@ async function todoPage(request, env) {
                 }
                 
                 const itemClass = todo.done ? 'todo-item completed' : 'todo-item';
-                html += '<div class="' + itemClass + '" data-id="' + todo.id + '" onclick="selectTodo(this)">' +
+                const isSelected = selectedTodos.includes(todo.id);
+                
+                // 多选复选框
+                let multiSelectHtml = '';
+                if (isMultiSelectMode) {
+                    multiSelectHtml = '<div class="multi-select-checkbox" onclick="event.stopPropagation(); toggleTodoSelection(' + todo.id + ')" style="float: left; margin-right: 10px; width: 20px; height: 20px; border: 2px solid #ff6b6b; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: ' + (isSelected ? 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)' : 'white') + ';">' + (isSelected ? '<i class="fas fa-check" style="color: white; font-size: 12px;"></i>' : '') + '</div>';
+                }
+                
+                html += '<div class="' + itemClass + (isSelected ? ' selected' : '') + '" data-id="' + todo.id + '" onclick="' + (isMultiSelectMode ? 'toggleTodoSelection(' + todo.id + ')' : 'selectTodo(this)') + '">' +
+                    multiSelectHtml +
                     '<div class="todo-actions">' +
                         '<button class="edit-btn" onclick="event.stopPropagation(); editTodo(' + todo.id + ')" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
                         '<button class="copy-btn" onclick="event.stopPropagation(); copyTodoText(' + todo.id + ')" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
                         '<button class="delete-btn" onclick="event.stopPropagation(); deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-times"></i></button>' +
                     '</div>' +
-                    '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' +
+                    (!isMultiSelectMode ? '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' : '') +
                     '<div class="todo-content">' +
                         '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
                         tagsHtml +
