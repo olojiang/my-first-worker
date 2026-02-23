@@ -272,7 +272,7 @@ async function authLogout(request, env) {
   return new Response(null, {
     status: 302,
     headers: {
-      'Location': '/',
+      'Location': '/todos',
       'Set-Cookie': clearCookie,
     },
   });
