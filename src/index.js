@@ -976,13 +976,36 @@ function todoPage() {
         
         .todo-item {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             padding: 15px;
             background: #f8f9fa;
             border-radius: 12px;
             margin-bottom: 10px;
             transition: all 0.3s;
             animation: slideIn 0.3s ease;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .todo-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        
+        @media (max-width: 480px) {
+            .todo-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .todo-actions {
+                margin-left: 0;
+                margin-top: 10px;
+                justify-content: flex-end;
+            }
         }
         
         @keyframes slideIn {
@@ -1022,6 +1045,7 @@ function todoPage() {
             justify-content: center;
             transition: all 0.3s;
             flex-shrink: 0;
+            margin-top: 2px;
         }
         
         .checkbox.checked {
@@ -1052,26 +1076,6 @@ function todoPage() {
             font-size: 12px;
             color: #999;
             margin-top: 4px;
-        }
-        
-        .delete-btn {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: #ff6b6b;
-            color: white;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            flex-shrink: 0;
-        }
-        
-        .delete-btn:active {
-            transform: scale(0.9);
         }
         
         .empty-state {
@@ -1202,9 +1206,9 @@ function todoPage() {
         </div>
         
         <div class="input-section">
-            <div class="input-group">
-                <input type="text" class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="200">
-                <button class="add-btn" id="add-btn" onclick="addTodo()">添加</button>
+            <div class="input-group" style="flex-direction: column;">
+                <textarea class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="500" style="min-height: 80px; resize: vertical; font-family: inherit;"></textarea>
+                <button class="add-btn" id="add-btn">添加</button>
             </div>
             <div class="tags-select" id="tags-select" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
                 <span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span>
@@ -1233,9 +1237,12 @@ function todoPage() {
             loadTodos();
             loadTags();
             
-            // 回车键添加
-            document.getElementById('todo-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
+            // 绑定添加按钮点击事件
+            document.getElementById('add-btn').addEventListener('click', addTodo);
+            
+            // Ctrl+Enter 添加
+            document.getElementById('todo-input').addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     addTodo();
                 }
             });
@@ -1358,10 +1365,10 @@ function todoPage() {
                         tagsHtml +
                         '<div class="todo-time">' + timeStr + '</div>' +
                     '</div>' +
-                    '<div class="todo-actions" style="display: flex; gap: 8px; align-items: center;">' +
-                        '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;">✏️</button>' +
-                        '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;">📋</button>' +
-                        '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;">×</button>' +
+                    '<div class="todo-actions">' +
+                        '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">✏️</button>' +
+                        '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">📋</button>' +
+                        '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">×</button>' +
                     '</div>' +
                 '</div>';
             });
@@ -1390,38 +1397,83 @@ function todoPage() {
             const todo = todos.find(t => t.id === id);
             if (!todo) return;
             
-            const newText = prompt('编辑待办事项:', todo.text);
-            if (newText === null) return; // 用户取消
+            // 创建自定义编辑对话框
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
             
-            const trimmedText = newText.trim();
-            if (!trimmedText) {
-                showToast('待办事项不能为空', 'error');
-                return;
-            }
+            const dialog = document.createElement('div');
+            dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;';
             
-            if (trimmedText === todo.text) {
-                return; // 内容未改变
-            }
+            dialog.innerHTML = '<h3 style="margin: 0 0 15px 0; color: #333;">编辑待办</h3>' +
+                '<textarea id="edit-textarea" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="输入待办内容...">' + escapeHtml(todo.text) + '</textarea>' +
+                '<div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">' +
+                    '<button id="edit-cancel" style="padding: 10px 20px; border: none; background: #e0e0e0; color: #333; border-radius: 8px; cursor: pointer; font-size: 14px;">取消</button>' +
+                    '<button id="edit-save" style="padding: 10px 20px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">保存</button>' +
+                '</div>';
             
-            // 发送更新请求
-            fetch('/api/todos/' + id, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: trimmedText })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    todo.text = trimmedText;
-                    renderTodos();
-                    showToast('编辑成功！');
-                } else {
-                    showToast(data.error || '编辑失败', 'error');
-                }
-            })
-            .catch(e => {
-                showToast('编辑失败: ' + e.message, 'error');
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            
+            const textarea = dialog.querySelector('#edit-textarea');
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            
+            // 取消按钮
+            dialog.querySelector('#edit-cancel').addEventListener('click', () => {
+                document.body.removeChild(overlay);
             });
+            
+            // 保存按钮
+            dialog.querySelector('#edit-save').addEventListener('click', () => {
+                const newText = textarea.value.trim();
+                
+                if (!newText) {
+                    showToast('待办事项不能为空', 'error');
+                    return;
+                }
+                
+                if (newText === todo.text) {
+                    document.body.removeChild(overlay);
+                    return;
+                }
+                
+                // 发送更新请求
+                fetch('/api/todos/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: newText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        todo.text = newText;
+                        renderTodos();
+                        showToast('编辑成功！');
+                        document.body.removeChild(overlay);
+                    } else {
+                        showToast(data.error || '编辑失败', 'error');
+                    }
+                })
+                .catch(e => {
+                    showToast('编辑失败: ' + e.message, 'error');
+                });
+            });
+            
+            // 点击遮罩关闭
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+            
+            // ESC 键关闭
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(overlay);
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
         }
         
         // 复制待办内容
