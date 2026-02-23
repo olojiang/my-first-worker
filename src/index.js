@@ -1342,13 +1342,15 @@ async function todoPage(request, env) {
             flex-wrap: wrap;
             margin-left: auto;
             opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
+            max-width: 0;
+            overflow: hidden;
+            transition: opacity 0.3s, max-width 0.3s;
+            white-space: nowrap;
         }
         
         .todo-item:hover .todo-actions {
             opacity: 1;
-            visibility: visible;
+            max-width: 200px;
         }
         
         @media (max-width: 480px) {
@@ -1362,12 +1364,12 @@ async function todoPage(request, env) {
                 margin-top: 10px;
                 justify-content: flex-end;
                 opacity: 0;
-                visibility: hidden;
+                max-width: 0;
             }
             
             .todo-item.selected .todo-actions {
                 opacity: 1;
-                visibility: visible;
+                max-width: 200px;
             }
         }
         
