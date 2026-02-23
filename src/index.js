@@ -115,6 +115,8 @@ export default {
         return apiWeather(request);
       case '/api/ai':
         return apiAI(request, env);
+      case '/api/ai/optimize':
+        return apiAIOptimize(request, env);
       case '/counter':
         return counterPage(request, env);
       case '/api/counter':
@@ -882,6 +884,67 @@ async function apiAI(request, env) {
   }
 }
 
+// AI 优化待办文本
+async function apiAIOptimize(request, env) {
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405);
+  }
+  
+  try {
+    const body = await request.json();
+    const text = body.text?.trim();
+    
+    if (!text) {
+      return jsonResponse({ success: false, error: '文本不能为空' }, 400);
+    }
+    
+    const response = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+      messages: [
+        { 
+          role: 'system', 
+          content: '你是一个待办事项优化助手。你的任务是优化用户输入的待办事项文本，使其更清晰、更具体、更可执行。' +
+                   '规则：\n' +
+                   '1. 保持原意不变\n' +
+                   '2. 使用简洁明确的语言\n' +
+                   '3. 添加必要的上下文信息\n' +
+                   '4. 如果涉及时间，使用明确的日期或时间范围\n' +
+                   '5. 直接返回优化后的文本，不要添加任何解释或前缀\n' +
+                   '6. 如果文本已经很清晰，直接返回原文'
+        },
+        { role: 'user', content: `请优化以下待办事项："${text}"` }
+      ]
+    });
+    
+    // 清理 AI 返回的结果
+    let optimized = response.response?.trim() || text;
+    
+    // 移除可能的引号
+    optimized = optimized.replace(/^["']|["']$/g, '');
+    
+    // 如果 AI 返回了前缀（如"优化后的文本："），尝试移除
+    const prefixes = ['优化后的文本：', '优化后：', '优化结果：', '优化：'];
+    for (const prefix of prefixes) {
+      if (optimized.startsWith(prefix)) {
+        optimized = optimized.substring(prefix.length).trim();
+        break;
+      }
+    }
+    
+    return jsonResponse({
+      success: true,
+      original: text,
+      optimized: optimized,
+      changed: optimized !== text
+    });
+  } catch (e) {
+    return jsonResponse({ 
+      success: false,
+      error: 'AI 优化失败',
+      message: e.message
+    }, 500);
+  }
+}
+
 async function counterPage(request, env) {
   const url = new URL(request.url);
   const action = url.searchParams.get('action');
@@ -1501,7 +1564,10 @@ async function todoPage(request, env) {
         <div class="input-section">
             <div class="input-group" style="flex-direction: column;">
                 <textarea class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="500" style="min-height: 80px; resize: vertical; font-family: inherit;"></textarea>
-                <button class="add-btn" id="add-btn">添加</button>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="add-btn" id="add-btn" style="flex: 1;">添加</button>
+                    <button class="add-btn" id="ai-optimize-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🤖 AI 优化</button>
+                </div>
             </div>
             <div class="tags-select" id="tags-select" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
                 <span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span>
@@ -1532,6 +1598,9 @@ async function todoPage(request, env) {
             
             // 绑定添加按钮点击事件
             document.getElementById('add-btn').addEventListener('click', addTodo);
+            
+            // 绑定 AI 优化按钮
+            document.getElementById('ai-optimize-btn').addEventListener('click', optimizeTodoText);
             
             // Ctrl+Enter 添加
             document.getElementById('todo-input').addEventListener('keydown', (e) => {
@@ -1869,6 +1938,48 @@ async function todoPage(request, env) {
         }
         
         // 添加待办
+        // AI 优化待办文本
+        async function optimizeTodoText() {
+            const input = document.getElementById('todo-input');
+            const btn = document.getElementById('ai-optimize-btn');
+            const originalText = input.value.trim();
+            
+            if (!originalText) {
+                showToast('请先输入待办事项内容', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '🤖 优化中...';
+            
+            try {
+                const response = await fetch('/api/ai/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: originalText })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.optimized) {
+                    // 显示优化前后的对比
+                    if (data.optimized !== originalText) {
+                        input.value = data.optimized;
+                        showToast('AI 已优化！原意："' + originalText.substring(0, 30) + (originalText.length > 30 ? '...' : '') + '"', 'success');
+                    } else {
+                        showToast('文本已经很清晰了，无需优化', 'success');
+                    }
+                } else {
+                    showToast(data.error || '优化失败', 'error');
+                }
+            } catch (e) {
+                showToast('优化失败: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 AI 优化';
+            }
+        }
+        
         async function addTodo() {
             const input = document.getElementById('todo-input');
             const btn = document.getElementById('add-btn');
