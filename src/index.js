@@ -1361,6 +1361,11 @@ async function todoPage(request, env) {
                 margin-left: 0;
                 margin-top: 10px;
                 justify-content: flex-end;
+                opacity: 0;
+                visibility: hidden;
+            }
+            
+            .todo-item.selected .todo-actions {
                 opacity: 1;
                 visibility: visible;
             }
@@ -1797,14 +1802,14 @@ async function todoPage(request, env) {
                     tagsHtml += '</div>';
                 }
                 
-                html += '<div class="todo-item ' + (todo.done ? 'completed' : '') + '" data-id="' + todo.id + '">' +
-                    '<div class="checkbox ' + (todo.done ? 'checked' : '') + '" onclick="toggleTodo(' + todo.id + ')"></div>' +
+                html += '<div class="todo-item ' + (todo.done ? 'completed' : '') + '" data-id="' + todo.id + '" onclick="selectTodo(this)">' +
+                    '<div class="checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' +
                     '<div class="todo-content">' +
                         '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
                         tagsHtml +
                         '<div class="todo-time">' + timeStr + '</div>' +
                     '</div>' +
-                    '<div class="todo-actions">' +
+                    '<div class="todo-actions" onclick="event.stopPropagation();">' +
                         '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
                         '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
                         '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-times"></i></button>' +
@@ -1829,6 +1834,18 @@ async function todoPage(request, env) {
                     editTodo(id);
                 });
             });
+        }
+        
+        // 选中 todo 项（移动端用）
+        function selectTodo(element) {
+            // 移除其他项的选中状态
+            document.querySelectorAll('.todo-item.selected').forEach(item => {
+                if (item !== element) {
+                    item.classList.remove('selected');
+                }
+            });
+            // 切换当前项的选中状态
+            element.classList.toggle('selected');
         }
         
         // 编辑待办
