@@ -1197,7 +1197,7 @@ async function todoPage(request, env) {
         }
         
         .container {
-            max-width: 600px;
+            
             margin: 0 auto;
             padding: 20px;
             min-height: 100vh;
@@ -1565,7 +1565,7 @@ async function todoPage(request, env) {
             <h1><i class="fas fa-clipboard-list"></i> TodoList</h1>
             <p>记录你的待办事项</p>
             ${userSection}
-            <a href="/tags" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
+            <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
         </div>
         
         <div class="stats">
