@@ -1352,20 +1352,22 @@ async function todoPage(request, env) {
         
         .todo-actions {
             float: right;
-            display: flex;
+            display: none;
             gap: 8px;
             align-items: center;
             opacity: 0;
-            max-width: 0;
+            max-width: 100%;
             overflow: hidden;
-            transition: opacity 0.3s, max-width 0.3s;
+            transition: opacity 0.3s;
             white-space: nowrap;
             margin-left: 10px;
+            justify-content: center;
         }
         
-        .todo-item:hover .todo-actions {
+        .todo-item:hover .todo-actions,
+        .todo-item.selected .todo-actions {
+            display: flex;
             opacity: 1;
-            max-width: 200px;
         }
         
         @media (max-width: 480px) {
@@ -1376,16 +1378,17 @@ async function todoPage(request, env) {
             
             .todo-actions {
                 float: none;
-                justify-content: flex-end;
+                display: none;
+                justify-content: center;
                 margin-left: 0;
                 margin-top: 10px;
                 opacity: 0;
-                max-width: 0;
+                max-width: 100%;
             }
             
             .todo-item.selected .todo-actions {
+                display: flex;
                 opacity: 1;
-                max-width: 200px;
             }
         }
         
