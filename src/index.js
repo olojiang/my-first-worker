@@ -902,17 +902,16 @@ async function apiAIOptimize(request, env) {
       messages: [
         { 
           role: 'system', 
-          content: 'You are a todo item optimization assistant. Your task is to optimize the user\'s todo text to make it clearer, more specific, and more actionable.' +
-                   '\n\nRules:\n' +
-                   '1. Keep the original meaning unchanged\n' +
-                   '2. Use concise and clear language\n' +
-                   '3. Add necessary context information\n' +
-                   '4. If time is involved, use specific dates or time ranges\n' +
-                   '5. Return only the optimized text without any explanation or prefix\n' +
-                   '6. If the text is already clear, return it as is\n' +
-                   '7. CRITICAL: You MUST respond in the SAME LANGUAGE as the user\'s input. If user writes in Chinese, you MUST reply in Chinese. If user writes in English, you MUST reply in English.'
+          content: 'You are a todo item optimization assistant. Your task is to optimize the user\'s todo text.' +
+                   '\n\nCRITICAL RULES:\n' +
+                   '1. ALWAYS respond in Chinese if the user input contains any Chinese characters\n' +
+                   '2. Only respond in English if the user input is entirely in English\n' +
+                   '3. Keep the original meaning unchanged\n' +
+                   '4. Use concise and clear language\n' +
+                   '5. Return ONLY the optimized text, no explanations\n' +
+                   '6. If already clear, return as is'
         },
-        { role: 'user', content: `Optimize this todo item (respond in the same language): "${text}"` }
+        { role: 'user', content: `Optimize this todo (MUST reply in Chinese if input has Chinese): "${text}"` }
       ]
     });
     
