@@ -548,7 +548,7 @@ async function homePage(request, env) {
     <div class="header">
         <h1>☁️ Cloudflare Worker 功能演示中心</h1>
         <p>体验 Workers、KV、D1、R2、AI 等强大功能</p>
-        <div style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%);">
+        <div style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%);">
             ${userSection}
         </div>
     </div>
@@ -2202,7 +2202,7 @@ function tagsPage() {
         }
         
         .container {
-            max-width: 600px;
+            
             margin: 0 auto;
             padding: 20px;
             min-height: 100vh;
