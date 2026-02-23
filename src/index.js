@@ -1604,8 +1604,18 @@ async function todoPage(request, env) {
             let html = '<span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span>';
             
             allTags.forEach(tag => {
-                const isSelected = selectedTags.includes(tag);
-                html += '<span onclick="toggleTag(' + JSON.stringify(tag).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (isSelected ? 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)' : '#f0f0f0') + '; color: ' + (isSelected ? 'white' : '#666') + '; border: 1px solid ' + (isSelected ? 'transparent' : '#ddd') + ';">' + escapeHtml(tag) + '</span>';
+                // 支持新格式 {name, color} 和旧格式 string
+                const tagName = typeof tag === 'object' ? tag.name : tag;
+                const tagColor = typeof tag === 'object' ? tag.color : null;
+                const isSelected = selectedTags.includes(tagName);
+                
+                if (isSelected) {
+                    html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border: 1px solid transparent; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                } else if (tagColor) {
+                    html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: white; border: 1px solid transparent; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                } else {
+                    html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                }
             });
             
             container.innerHTML = html;
@@ -1690,12 +1700,16 @@ async function todoPage(request, env) {
                     minute: '2-digit' 
                 });
                 
-                // 渲染标签
+                // 渲染标签 - 使用标签的颜色
                 let tagsHtml = '';
                 if (todo.tags && todo.tags.length > 0) {
                     tagsHtml = '<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;">';
-                    todo.tags.forEach(tag => {
-                        tagsHtml += '<span style="padding: 2px 8px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 10px; font-size: 11px;">' + escapeHtml(tag) + '</span>';
+                    todo.tags.forEach(tagName => {
+                        // 从 allTags 中查找标签颜色
+                        const tagObj = allTags.find(t => (typeof t === 'object' ? t.name : t) === tagName);
+                        const tagColor = tagObj && typeof tagObj === 'object' ? tagObj.color : null;
+                        const bgStyle = tagColor ? 'background: ' + tagColor + ';' : 'background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);';
+                        tagsHtml += '<span style="padding: 2px 8px; ' + bgStyle + ' color: white; border-radius: 10px; font-size: 11px;">' + escapeHtml(tagName) + '</span>';
                     });
                     tagsHtml += '</div>';
                 }
@@ -2279,7 +2293,15 @@ function tagsPage() {
             
             let html = '<h2>所有标签</h2>';
             tags.forEach((tag, index) => {
-                html += '<div class="tag-item" data-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '<span class="tag-delete" data-index="' + index + '">×</span></div>';
+                // 支持新格式 {name, color} 和旧格式 string
+                const tagName = typeof tag === 'object' ? tag.name : tag;
+                const tagColor = typeof tag === 'object' ? tag.color : null;
+                const bgStyle = tagColor ? 'background: ' + tagColor + ';' : 'background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);';
+                
+                html += '<div class="tag-item" data-tag="' + escapeHtml(tagName) + '" style="' + bgStyle + '">' + 
+                    escapeHtml(tagName) + 
+                    '<span class="tag-delete" data-index="' + index + '">×</span>' +
+                    '</div>';
             });
             
             listEl.innerHTML = html;
@@ -2287,8 +2309,8 @@ function tagsPage() {
             // 绑定删除按钮点击事件
             listEl.querySelectorAll('.tag-delete').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const tag = e.target.closest('.tag-item').dataset.tag;
-                    deleteTag(tag);
+                    const tagName = e.target.closest('.tag-item').dataset.tag;
+                    deleteTag(tagName);
                 });
             });
         }
@@ -2314,7 +2336,7 @@ function tagsPage() {
                 const response = await fetch('/api/tags', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
+                    body: JSON.stringify({ name: name })
                 });
                 
                 console.log('Response received:', response.status);
@@ -2625,12 +2647,30 @@ async function apiTodos(request, env) {
   }
 }
 
-// Tags API - 使用 KV 存储标签
+// Tags API - 使用 KV 存储标签（带颜色）
 async function apiTags(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
-  const KV_KEY = 'tags_list';
+  const KV_KEY = 'tags_list_v2'; // 使用新 key 避免兼容问题
+  
+  // 预定义的颜色列表
+  const TAG_COLORS = [
+    '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff',
+    '#5f27cd', '#00d2d3', '#1dd1a1', '#ff9f43', '#ee5a24',
+    '#009432', '#0652dd', '#9980fa', '#f368e0', '#ff4757'
+  ];
+  
+  // 为标签分配颜色的函数
+  function assignColor(existingTags) {
+    const usedColors = existingTags.map(t => t.color).filter(Boolean);
+    const availableColors = TAG_COLORS.filter(c => !usedColors.includes(c));
+    if (availableColors.length > 0) {
+      return availableColors[0];
+    }
+    // 如果所有颜色都用过了，随机返回一个
+    return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+  }
   
   try {
     // GET /api/tags - 获取所有标签
@@ -2644,6 +2684,7 @@ async function apiTags(request, env) {
     if (method === 'POST' && path === '/api/tags') {
       const body = await request.json();
       const tagName = body.name?.trim();
+      const tagColor = body.color?.trim();
       
       if (!tagName) {
         return jsonResponse({ success: false, error: '标签名称不能为空' }, 400);
@@ -2654,19 +2695,68 @@ async function apiTags(request, env) {
       let tags = tagsJson ? JSON.parse(tagsJson) : [];
       
       // 检查是否已存在
-      if (tags.includes(tagName)) {
+      if (tags.some(t => t.name === tagName)) {
         return jsonResponse({ success: false, error: '标签已存在' }, 400);
       }
       
-      // 添加新标签
-      tags.push(tagName);
+      // 添加新标签（带颜色）
+      const newTag = {
+        name: tagName,
+        color: tagColor || assignColor(tags)
+      };
+      tags.push(newTag);
       await env.CACHE.put(KV_KEY, JSON.stringify(tags));
       
-      return jsonResponse({ success: true, tag: tagName, tags });
+      return jsonResponse({ success: true, tag: newTag, tags });
+    }
+    
+    // PUT /api/tags/:name - 更新标签颜色
+    if (method === 'PUT' && path.match(/^\/api\/tags\/.+$/)) {
+      const tagName = decodeURIComponent(path.split('/').pop());
+      const body = await request.json();
+      const newColor = body.color?.trim();
+      
+      if (!newColor) {
+        return jsonResponse({ success: false, error: '颜色不能为空' }, 400);
+      }
+      
+      const tagsJson = await env.CACHE.get(KV_KEY);
+      let tags = tagsJson ? JSON.parse(tagsJson) : [];
+      
+      const tagIndex = tags.findIndex(t => t.name === tagName);
+      if (tagIndex === -1) {
+        return jsonResponse({ success: false, error: '标签不存在' }, 404);
+      }
+      
+      tags[tagIndex].color = newColor;
+      await env.CACHE.put(KV_KEY, JSON.stringify(tags));
+      
+      return jsonResponse({ success: true, tag: tags[tagIndex], tags });
     }
     
     // DELETE /api/tags/:name - 删除标签
     if (method === 'DELETE' && path.match(/^\/api\/tags\/.+$/)) {
+      const tagName = decodeURIComponent(path.split('/').pop());
+      
+      const tagsJson = await env.CACHE.get(KV_KEY);
+      let tags = tagsJson ? JSON.parse(tagsJson) : [];
+      
+      tags = tags.filter(t => t.name !== tagName);
+      await env.CACHE.put(KV_KEY, JSON.stringify(tags));
+      
+      return jsonResponse({ success: true, tags });
+    }
+    
+    return jsonResponse({ error: 'Not Found' }, 404);
+    
+  } catch (e) {
+    return jsonResponse({ 
+      success: false,
+      error: '操作失败', 
+      message: e.message 
+    }, 500);
+  }
+}
       const tagName = decodeURIComponent(path.split('/').pop());
       
       // 获取现有标签
