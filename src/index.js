@@ -250,11 +250,11 @@ async function authCallback(request, env) {
     loggedInAt: Date.now(),
   }, 86400); // 24 小时
   
-  // 重定向到首页
+  // 重定向到 todo 页面
   return new Response(null, {
     status: 302,
     headers: {
-      'Location': '/',
+      'Location': '/todos',
       'Set-Cookie': sessionCookie,
     },
   });
