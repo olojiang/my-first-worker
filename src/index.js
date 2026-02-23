@@ -1322,32 +1322,45 @@ async function todoPage(request, env) {
         }
         
         .todo-item {
-            display: flex;
-            align-items: flex-start;
             padding: 15px;
             background: #f8f9fa;
             border-radius: 12px;
             margin-bottom: 10px;
             transition: all 0.3s;
             animation: slideIn 0.3s ease;
-            gap: 10px;
             position: relative;
-            align-self: flex-start;
             width: 100%;
             box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .todo-item::after {
+            content: '';
+            display: table;
+            clear: both;
+        }
+        
+        .todo-checkbox {
+            float: left;
+            margin-right: 15px;
+            margin-top: 2px;
+        }
+        
+        .todo-content {
+            overflow: hidden;
         }
         
         .todo-actions {
+            float: right;
             display: flex;
             gap: 8px;
             align-items: center;
-            flex-wrap: wrap;
-            margin-left: auto;
             opacity: 0;
             max-width: 0;
             overflow: hidden;
             transition: opacity 0.3s, max-width 0.3s;
             white-space: nowrap;
+            margin-left: 10px;
         }
         
         .todo-item:hover .todo-actions {
@@ -1357,24 +1370,17 @@ async function todoPage(request, env) {
         
         @media (max-width: 480px) {
             .todo-item {
-                flex-direction: column;
-                align-items: stretch;
                 min-height: auto;
                 height: auto;
-                align-self: auto;
-            }
-            
-            .todo-content {
-                width: 100%;
             }
             
             .todo-actions {
+                float: none;
+                justify-content: flex-end;
                 margin-left: 0;
                 margin-top: 10px;
-                justify-content: flex-end;
                 opacity: 0;
                 max-width: 0;
-                align-self: flex-end;
             }
             
             .todo-item.selected .todo-actions {
@@ -1815,16 +1821,16 @@ async function todoPage(request, env) {
                 }
                 
                 html += '<div class="todo-item ' + (todo.done ? 'completed' : '') + '" data-id="' + todo.id + '" onclick="selectTodo(this)">' +
-                    '<div class="checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' +
-                    '<div class="todo-content">' +
-                        '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
-                        tagsHtml +
-                        '<div class="todo-time">' + timeStr + '</div>' +
-                    '</div>' +
                     '<div class="todo-actions" onclick="event.stopPropagation();">' +
                         '<button class="edit-btn" data-id="' + todo.id + '" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
                         '<button class="copy-btn" data-id="' + todo.id + '" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
                         '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-times"></i></button>' +
+                    '</div>' +
+                    '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' +
+                    '<div class="todo-content">' +
+                        '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
+                        tagsHtml +
+                        '<div class="todo-time">' + timeStr + '</div>' +
                     '</div>' +
                 '</div>';
             });
