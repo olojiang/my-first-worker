@@ -1364,13 +1364,22 @@ async function todoPage(request, env) {
             justify-content: center;
         }
         
-        .todo-item:hover .todo-actions,
-        .todo-item.selected .todo-actions {
+        .todo-item:hover .todo-actions {
             display: flex;
             opacity: 1;
         }
         
         @media (max-width: 480px) {
+            .todo-item:hover .todo-actions {
+                display: none;
+                opacity: 0;
+            }
+            
+            .todo-item.selected .todo-actions {
+                display: flex;
+                opacity: 1;
+            }
+        }
             .todo-item {
                 min-height: auto;
                 height: auto;
