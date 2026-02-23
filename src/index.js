@@ -2757,26 +2757,3 @@ async function apiTags(request, env) {
     }, 500);
   }
 }
-      const tagName = decodeURIComponent(path.split('/').pop());
-      
-      // 获取现有标签
-      const tagsJson = await env.CACHE.get(KV_KEY);
-      let tags = tagsJson ? JSON.parse(tagsJson) : [];
-      
-      // 删除标签
-      tags = tags.filter(t => t !== tagName);
-      await env.CACHE.put(KV_KEY, JSON.stringify(tags));
-      
-      return jsonResponse({ success: true, tags });
-    }
-    
-    return jsonResponse({ error: 'Not Found' }, 404);
-    
-  } catch (e) {
-    return jsonResponse({ 
-      success: false,
-      error: '操作失败', 
-      message: e.message 
-    }, 500);
-  }
-}
