@@ -24,5 +24,9 @@
       "database_name": "my-first-worker-db",
       "database_id": "6e288743-119a-4d3e-8b37-7532e6c1fce8"
     }
-  ]
+  ],
+  "vars": {
+    "GITHUB_CLIENT_ID": "Ov23limcD35agNy1E1by",
+    "GITHUB_CLIENT_SECRET": "848a28d1594c6133c450cea41f95acd256004aab"
+  }
 }
