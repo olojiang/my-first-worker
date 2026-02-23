@@ -902,17 +902,17 @@ async function apiAIOptimize(request, env) {
       messages: [
         { 
           role: 'system', 
-          content: '你是一个待办事项优化助手。你的任务是优化用户输入的待办事项文本，使其更清晰、更具体、更可执行。' +
-                   '规则：\n' +
-                   '1. 保持原意不变\n' +
-                   '2. 使用简洁明确的语言\n' +
-                   '3. 添加必要的上下文信息\n' +
-                   '4. 如果涉及时间，使用明确的日期或时间范围\n' +
-                   '5. 直接返回优化后的文本，不要添加任何解释或前缀\n' +
-                   '6. 如果文本已经很清晰，直接返回原文\n' +
-                   '7. **重要：必须使用与用户输入相同的语言进行回复**'
+          content: 'You are a todo item optimization assistant. Your task is to optimize the user\'s todo text to make it clearer, more specific, and more actionable.' +
+                   '\n\nRules:\n' +
+                   '1. Keep the original meaning unchanged\n' +
+                   '2. Use concise and clear language\n' +
+                   '3. Add necessary context information\n' +
+                   '4. If time is involved, use specific dates or time ranges\n' +
+                   '5. Return only the optimized text without any explanation or prefix\n' +
+                   '6. If the text is already clear, return it as is\n' +
+                   '7. CRITICAL: You MUST respond in the SAME LANGUAGE as the user\'s input. If user writes in Chinese, you MUST reply in Chinese. If user writes in English, you MUST reply in English.'
         },
-        { role: 'user', content: `请优化以下待办事项（使用相同语言回复）："${text}"` }
+        { role: 'user', content: `Optimize this todo item (respond in the same language): "${text}"` }
       ]
     });
     
