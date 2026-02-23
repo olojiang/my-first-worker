@@ -1356,7 +1356,7 @@ async function todoPage(request, env) {
             gap: 8px;
             align-items: center;
             opacity: 0;
-            max-width: 100%;
+            max-width: 99%;
             overflow: hidden;
             transition: opacity 0.3s;
             white-space: nowrap;
@@ -1383,7 +1383,7 @@ async function todoPage(request, env) {
                 margin-left: 0;
                 margin-top: 10px;
                 opacity: 0;
-                max-width: 100%;
+                max-width: 99%;
             }
             
             .todo-item.selected .todo-actions {
