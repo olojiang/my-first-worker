@@ -1355,29 +1355,27 @@ async function todoPage(request, env) {
         
         @media (max-width: 480px) {
             .todo-item {
-                flex-direction: row;
-                align-items: flex-start;
-                flex-wrap: nowrap;
+                flex-direction: column;
+                align-items: stretch;
+                min-height: auto;
             }
             
             .todo-content {
-                flex: 1;
-                min-width: 0;
-                overflow: hidden;
+                width: 100%;
             }
             
             .todo-actions {
-                margin-left: auto;
-                margin-top: 0;
+                margin-left: 0;
+                margin-top: 10px;
                 justify-content: flex-end;
                 opacity: 0;
                 max-width: 0;
-                flex-shrink: 0;
+                align-self: flex-end;
             }
             
             .todo-item.selected .todo-actions {
                 opacity: 1;
-                max-width: 120px;
+                max-width: 200px;
             }
         }
         
