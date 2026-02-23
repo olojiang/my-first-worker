@@ -1330,9 +1330,11 @@ async function todoPage(request, env) {
             margin-bottom: 10px;
             transition: all 0.3s;
             animation: slideIn 0.3s ease;
-            flex-wrap: wrap;
             gap: 10px;
             position: relative;
+            align-self: flex-start;
+            width: 100%;
+            box-sizing: border-box;
         }
         
         .todo-actions {
@@ -1358,6 +1360,8 @@ async function todoPage(request, env) {
                 flex-direction: column;
                 align-items: stretch;
                 min-height: auto;
+                height: auto;
+                align-self: auto;
             }
             
             .todo-content {
