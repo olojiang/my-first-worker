@@ -2391,6 +2391,23 @@ async function apiTodos(request, env) {
   const path = url.pathname;
   const method = request.method;
   
+  // 获取当前登录用户
+  const session = await getSession(env, request);
+  const currentUser = session?.data?.user;
+  
+  // 打印用户信息到控制台
+  if (currentUser) {
+    console.log('Current User:', JSON.stringify({
+      id: currentUser.id,
+      login: currentUser.login,
+      name: currentUser.name,
+      email: currentUser.email,
+      avatar_url: currentUser.avatar_url
+    }, null, 2));
+  } else {
+    console.log('Current User: Not logged in');
+  }
+  
   try {
     // 确保表存在 - 使用 prepare().run() 而不是 exec
     try {
@@ -2405,6 +2422,13 @@ async function apiTodos(request, env) {
         )
       `).run();
       
+      // 尝试添加 user_id 列（如果表已存在但缺少该列）
+      try {
+        await env.DB.prepare('ALTER TABLE todos ADD COLUMN user_id INTEGER').run();
+      } catch (alterErr) {
+        // 列已存在或表刚创建，忽略错误
+      }
+      
       // 尝试添加 tags 列（如果表已存在但缺少该列）
       try {
         await env.DB.prepare('ALTER TABLE todos ADD COLUMN tags TEXT').run();
@@ -2415,16 +2439,26 @@ async function apiTodos(request, env) {
       // 忽略错误
     }
     
-    // GET /api/todos - 获取所有待办
+    // GET /api/todos - 获取所有待办（只返回当前用户的）
     if (method === 'GET' && path === '/api/todos') {
-      const result = await env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC').all();
+      let result;
+      if (currentUser) {
+        // 只获取当前用户的待办
+        result = await env.DB.prepare('SELECT * FROM todos WHERE user_id = ? ORDER BY created_at DESC')
+          .bind(currentUser.id)
+          .all();
+      } else {
+        // 未登录时获取所有待办（或可以返回空数组）
+        result = await env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC').all();
+      }
       const todos = (result.results || []).map(todo => ({
         ...todo,
         tags: todo.tags ? JSON.parse(todo.tags) : []
       }));
       return jsonResponse({ 
         success: true, 
-        todos: todos
+        todos: todos,
+        user: currentUser ? { id: currentUser.id, login: currentUser.login } : null
       });
     }
     
@@ -2438,8 +2472,13 @@ async function apiTodos(request, env) {
         return jsonResponse({ success: false, error: '待办事项不能为空' }, 400);
       }
       
-      // 插入数据 - 使用 prepare().run()
-      await env.DB.prepare('INSERT INTO todos (text, tags) VALUES (?, ?)').bind(text, JSON.stringify(tags)).run();
+      // 获取当前用户ID
+      const userId = currentUser ? currentUser.id : null;
+      
+      // 插入数据 - 包含 user_id
+      await env.DB.prepare('INSERT INTO todos (text, tags, user_id) VALUES (?, ?, ?)')
+        .bind(text, JSON.stringify(tags), userId)
+        .run();
       
       // 获取刚插入的数据
       const result = await env.DB.prepare('SELECT * FROM todos ORDER BY id DESC LIMIT 1').all();
