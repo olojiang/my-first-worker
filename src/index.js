@@ -1958,6 +1958,9 @@ async function todoPage(request, env) {
             const todo = todos.find(t => t.id === id);
             if (!todo) return;
             
+            // 当前编辑的标签
+            let editTags = todo.tags ? [...todo.tags] : [];
+            
             // 创建自定义编辑对话框
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
@@ -1965,8 +1968,32 @@ async function todoPage(request, env) {
             const dialog = document.createElement('div');
             dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;';
             
+            // 渲染标签选择
+            function renderEditTags() {
+                let tagsHtml = '';
+                if (allTags.length > 0) {
+                    tagsHtml = '<div style="margin-top: 15px;"><div style="font-size: 14px; color: #666; margin-bottom: 10px;">选择标签:</div><div style="display: flex; flex-wrap: wrap; gap: 8px;">';
+                    allTags.forEach(tag => {
+                        const tagName = typeof tag === 'object' ? tag.name : tag;
+                        const tagColor = typeof tag === 'object' ? tag.color : null;
+                        const isSelected = editTags.includes(tagName);
+                        
+                        if (isSelected) {
+                            tagsHtml += '<span class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + ';">' + escapeHtml(tagName) + '</span>';
+                        } else if (tagColor) {
+                            tagsHtml += '<span class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: white; border: 1px solid transparent;">' + escapeHtml(tagName) + '</span>';
+                        } else {
+                            tagsHtml += '<span class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd;">' + escapeHtml(tagName) + '</span>';
+                        }
+                    });
+                    tagsHtml += '</div></div>';
+                }
+                return tagsHtml;
+            }
+            
             dialog.innerHTML = '<h3 style="margin: 0 0 15px 0; color: #333;">编辑待办</h3>' +
                 '<textarea id="edit-textarea" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="输入待办内容...">' + escapeHtml(todo.text) + '</textarea>' +
+                '<div id="edit-tags-container">' + renderEditTags() + '</div>' +
                 '<div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">' +
                     '<button id="edit-cancel" style="padding: 10px 20px; border: none; background: #e0e0e0; color: #333; border-radius: 8px; cursor: pointer; font-size: 14px;">取消</button>' +
                     '<button id="edit-save" style="padding: 10px 20px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">保存</button>' +
@@ -1974,6 +2001,32 @@ async function todoPage(request, env) {
             
             overlay.appendChild(dialog);
             document.body.appendChild(overlay);
+            
+            // 绑定标签点击事件
+            dialog.querySelectorAll('.edit-tag-item').forEach(tagEl => {
+                tagEl.addEventListener('click', () => {
+                    const tagName = tagEl.dataset.tag;
+                    if (editTags.includes(tagName)) {
+                        editTags = editTags.filter(t => t !== tagName);
+                    } else {
+                        editTags.push(tagName);
+                    }
+                    // 重新渲染标签
+                    document.getElementById('edit-tags-container').innerHTML = renderEditTags();
+                    // 重新绑定事件
+                    dialog.querySelectorAll('.edit-tag-item').forEach(newTagEl => {
+                        newTagEl.addEventListener('click', () => {
+                            const newTagName = newTagEl.dataset.tag;
+                            if (editTags.includes(newTagName)) {
+                                editTags = editTags.filter(t => t !== newTagName);
+                            } else {
+                                editTags.push(newTagName);
+                            }
+                            document.getElementById('edit-tags-container').innerHTML = renderEditTags();
+                        });
+                    });
+                });
+            });
             
             const textarea = dialog.querySelector('#edit-textarea');
             textarea.focus();
@@ -1993,21 +2046,29 @@ async function todoPage(request, env) {
                     return;
                 }
                 
-                if (newText === todo.text) {
+                const textChanged = newText !== todo.text;
+                const tagsChanged = JSON.stringify(editTags.sort()) !== JSON.stringify((todo.tags || []).sort());
+                
+                if (!textChanged && !tagsChanged) {
                     document.body.removeChild(overlay);
                     return;
                 }
                 
                 // 发送更新请求
+                const updateData = {};
+                if (textChanged) updateData.text = newText;
+                if (tagsChanged) updateData.tags = editTags;
+                
                 fetch('/api/todos/' + id, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: newText })
+                    body: JSON.stringify(updateData)
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        todo.text = newText;
+                        if (textChanged) todo.text = newText;
+                        if (tagsChanged) todo.tags = editTags;
                         renderTodos();
                         showToast('编辑成功！');
                         document.body.removeChild(overlay);
@@ -2032,6 +2093,10 @@ async function todoPage(request, env) {
                 if (e.key === 'Escape') {
                     document.body.removeChild(overlay);
                     document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+        }
                 }
             };
             document.addEventListener('keydown', handleEsc);
@@ -2796,8 +2861,15 @@ async function apiTodos(request, env) {
         await env.DB.prepare('UPDATE todos SET text = ? WHERE id = ?').bind(body.text, id).run();
       }
       
+      if (body.tags) {
+        await env.DB.prepare('UPDATE todos SET tags = ? WHERE id = ?').bind(JSON.stringify(body.tags), id).run();
+      }
+      
       const result = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
       const todo = result.results?.[0];
+      if (todo) {
+        todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
+      }
       
       return jsonResponse({ success: true, todo });
     }
