@@ -4,6 +4,91 @@ const memoryStore = {
   shortUrls: new Map(),
 };
 
+// ========== GitHub OAuth 工具函数 ==========
+
+// 生成随机 state 防止 CSRF
+function generateState() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// 生成 session ID
+function generateSessionId() {
+  return crypto.randomUUID();
+}
+
+// 简单的 cookie 签名 (HMAC-SHA256)
+async function signCookie(value, secret) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
+  const sigHex = Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return `${value}.${sigHex}`;
+}
+
+// 验证 cookie 签名
+async function verifyCookie(signedValue, secret) {
+  const lastDot = signedValue.lastIndexOf('.');
+  if (lastDot === -1) return null;
+  
+  const value = signedValue.slice(0, lastDot);
+  const expected = await signCookie(value, secret);
+  
+  // 时间安全比较
+  if (signedValue.length !== expected.length) return null;
+  
+  let match = true;
+  for (let i = 0; i < signedValue.length; i++) {
+    if (signedValue[i] !== expected[i]) match = false;
+  }
+  
+  return match ? value : null;
+}
+
+// 获取 session 数据
+async function getSession(env, request) {
+  const cookie = request.headers.get('Cookie');
+  if (!cookie) return null;
+  
+  const match = cookie.match(/session=([^;]+)/);
+  if (!match) return null;
+  
+  const sessionId = await verifyCookie(decodeURIComponent(match[1]), env.COOKIE_SECRET);
+  if (!sessionId) return null;
+  
+  const data = await env.CACHE.get(`oauth_session:${sessionId}`, 'json');
+  if (!data) return null;
+  
+  return { sessionId, data };
+}
+
+// 设置 session
+async function setSession(env, sessionId, data, expiresInSeconds = 86400) {
+  await env.CACHE.put(`oauth_session:${sessionId}`, JSON.stringify(data), {
+    expirationTtl: expiresInSeconds,
+  });
+  
+  const signed = await signCookie(sessionId, env.COOKIE_SECRET);
+  return `session=${encodeURIComponent(signed)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${expiresInSeconds}`;
+}
+
+// 清除 session
+async function clearSession(env, sessionId) {
+  await env.CACHE.delete(`oauth_session:${sessionId}`);
+  return `session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
+}
+
+// ========== 主入口 ==========
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -11,8 +96,19 @@ export default {
     
     // 路由处理
     switch (path) {
+      // GitHub OAuth 路由
+      case '/auth/login':
+        return authLogin(request, env);
+      case '/auth/github/callback':
+        return authCallback(request, env);
+      case '/auth/logout':
+        return authLogout(request, env);
+      case '/api/me':
+        return apiMe(request, env);
+        
+      // 原有路由
       case '/':
-        return homePage();
+        return homePage(request, env);
       case '/api/time':
         return apiTime();
       case '/api/weather':
@@ -55,6 +151,146 @@ export default {
     }
   },
 };
+
+// ========== GitHub OAuth 处理函数 ==========
+
+// 1. 开始 GitHub OAuth 登录
+async function authLogin(request, env) {
+  const url = new URL(request.url);
+  const state = generateState();
+  const sessionId = generateSessionId();
+  
+  // 存储 state 到 session
+  await env.CACHE.put(`oauth_session:${sessionId}`, JSON.stringify({ state }), {
+    expirationTtl: 600, // 10 分钟过期
+  });
+  
+  const signedSession = await signCookie(sessionId, env.COOKIE_SECRET);
+  
+  const githubAuthUrl = new URL('https://github.com/login/oauth/authorize');
+  githubAuthUrl.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
+  githubAuthUrl.searchParams.set('redirect_uri', `${url.origin}/auth/github/callback`);
+  githubAuthUrl.searchParams.set('scope', 'read:user user:email');
+  githubAuthUrl.searchParams.set('state', state);
+  
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': githubAuthUrl.toString(),
+      'Set-Cookie': `session=${encodeURIComponent(signedSession)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+    },
+  });
+}
+
+// 2. GitHub OAuth 回调处理
+async function authCallback(request, env) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  const error = url.searchParams.get('error');
+  
+  if (error) {
+    return new Response(`OAuth Error: ${error}`, { status: 400 });
+  }
+  
+  if (!code || !state) {
+    return new Response('Missing code or state', { status: 400 });
+  }
+  
+  // 验证 session 和 state
+  const session = await getSession(env, request);
+  if (!session || session.data.state !== state) {
+    return new Response('Invalid session or state', { status: 403 });
+  }
+  
+  // 交换 code 获取 access token
+  const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: env.GITHUB_CLIENT_ID,
+      client_secret: env.GITHUB_CLIENT_SECRET,
+      code,
+      redirect_uri: `${url.origin}/auth/github/callback`,
+    }),
+  });
+  
+  const tokenData = await tokenResponse.json();
+  
+  if (tokenData.error) {
+    return new Response(`Token Error: ${tokenData.error_description}`, { status: 400 });
+  }
+  
+  const accessToken = tokenData.access_token;
+  
+  // 获取用户信息
+  const userResponse = await fetch('https://api.github.com/user', {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'Cloudflare-Worker-OAuth',
+    },
+  });
+  
+  const userData = await userResponse.json();
+  
+  // 更新 session 存储用户信息
+  const sessionCookie = await setSession(env, session.sessionId, {
+    user: {
+      id: userData.id,
+      login: userData.login,
+      name: userData.name,
+      email: userData.email,
+      avatar_url: userData.avatar_url,
+    },
+    accessToken,
+    loggedInAt: Date.now(),
+  }, 86400); // 24 小时
+  
+  // 重定向到首页
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': '/',
+      'Set-Cookie': sessionCookie,
+    },
+  });
+}
+
+// 3. 登出
+async function authLogout(request, env) {
+  const session = await getSession(env, request);
+  let clearCookie = 'session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+  
+  if (session) {
+    clearCookie = await clearSession(env, session.sessionId);
+  }
+  
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': '/',
+      'Set-Cookie': clearCookie,
+    },
+  });
+}
+
+// 4. 获取当前用户信息 API
+async function apiMe(request, env) {
+  const session = await getSession(env, request);
+  
+  if (!session || !session.data.user) {
+    return jsonResponse({ error: 'Not authenticated' }, 401);
+  }
+  
+  return jsonResponse({
+    user: session.data.user,
+    loggedInAt: session.data.loggedInAt,
+  });
+}
 
 // 测试所有存储服务
 async function apiTestAll(request, env) {
@@ -140,7 +376,28 @@ async function apiTestAll(request, env) {
 }
 
 // 1. 首页 - 带功能切换
-function homePage() {
+async function homePage(request, env) {
+  // 获取登录状态
+  let user = null;
+  if (request && env) {
+    const session = await getSession(env, request);
+    if (session?.data?.user) {
+      user = session.data.user;
+    }
+  }
+  
+  const userSection = user ? `
+    <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 25px;">
+      <img src="${user.avatar_url}" alt="avatar" style="width: 32px; height: 32px; border-radius: 50%;">
+      <span>${user.name || user.login}</span>
+      <a href="/auth/logout" style="color: #ff6b6b; text-decoration: none; font-size: 12px; margin-left: 10px;">退出</a>
+    </div>
+  ` : `
+    <a href="/auth/login" style="background: rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; font-weight: 500;">
+      🔐 GitHub 登录
+    </a>
+  `;
+  
   return new Response(`
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -288,6 +545,9 @@ function homePage() {
     <div class="header">
         <h1>☁️ Cloudflare Worker 功能演示中心</h1>
         <p>体验 Workers、KV、D1、R2、AI 等强大功能</p>
+        <div style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%);">
+            ${userSection}
+        </div>
     </div>
     
     <div class="nav-tabs">
