@@ -1,0 +1,2092 @@
+// 内存存储（演示用）
+const memoryStore = {
+  counter: 0,
+  shortUrls: new Map(),
+};
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    
+    // 路由处理
+    switch (path) {
+      case '/':
+        return homePage();
+      case '/api/time':
+        return apiTime();
+      case '/api/weather':
+        return apiWeather(request);
+      case '/api/ai':
+        return apiAI(request, env);
+      case '/counter':
+        return counterPage(request, env);
+      case '/api/counter':
+        return apiCounter(request, env);
+      case '/api/shorten':
+        return apiShorten(request, env);
+      case '/api/kv':
+        return apiKV(request, env);
+      case '/api/d1':
+        return apiD1(request, env);
+      case '/api/r2':
+        return apiR2(request, env);
+      case '/api/test-all':
+        return apiTestAll(request, env);
+      case '/todos':
+        return todoPage();
+      case '/api/todos':
+        return apiTodos(request, env);
+      case '/tags':
+        return tagsPage();
+      case '/api/tags':
+        return apiTags(request, env);
+      default:
+        if (path.startsWith('/api/todos/')) {
+          return apiTodos(request, env);
+        }
+        if (path.startsWith('/api/tags/')) {
+          return apiTags(request, env);
+        }
+        if (path.startsWith('/s/')) {
+          return redirectShortUrl(path, env);
+        }
+        return notFound();
+    }
+  },
+};
+
+// 测试所有存储服务
+async function apiTestAll(request, env) {
+  const results = {
+    kv: { status: 'unknown', error: null },
+    r2: { status: 'unknown', error: null },
+    d1: { status: 'unknown', error: null },
+    ai: { status: 'unknown', error: null }
+  };
+
+  // 测试 KV
+  try {
+    const testKey = 'test_' + Date.now();
+    await env.CACHE.put(testKey, 'Hello KV!');
+    const value = await env.CACHE.get(testKey);
+    await env.CACHE.delete(testKey);
+    results.kv.status = value === 'Hello KV!' ? '✅ 正常' : '❌ 数据不匹配';
+  } catch (e) {
+    results.kv.status = '❌ 错误';
+    results.kv.error = e.message;
+  }
+
+  // 测试 R2
+  try {
+    const testKey = 'test_' + Date.now() + '.txt';
+    await env.STORAGE.put(testKey, 'Hello R2!');
+    const object = await env.STORAGE.get(testKey);
+    const value = object ? await object.text() : null;
+    await env.STORAGE.delete(testKey);
+    results.r2.status = value === 'Hello R2!' ? '✅ 正常' : '❌ 数据不匹配';
+  } catch (e) {
+    results.r2.status = '❌ 错误';
+    results.r2.error = e.message;
+  }
+
+  // 测试 D1
+  try {
+    // 创建测试表（如果不存在）
+    await env.DB.exec(`
+      CREATE TABLE IF NOT EXISTS test_table (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 插入测试数据
+    await env.DB.exec("INSERT INTO test_table (message) VALUES ('Hello D1!')");
+    
+    // 查询数据 - 使用 all() 获取结果
+    const queryResult = await env.DB.prepare('SELECT * FROM test_table ORDER BY id DESC LIMIT 1').all();
+    const rows = queryResult.results || [];
+    
+    // 清理测试数据
+    await env.DB.exec("DELETE FROM test_table WHERE message = 'Hello D1!'");
+    
+    results.d1.status = rows.length > 0 ? '✅ 正常' : '❌ 无数据';
+    results.d1.lastRow = rows[0];
+  } catch (e) {
+    results.d1.status = '❌ 错误';
+    results.d1.error = e.message;
+  }
+
+  // 测试 AI
+  try {
+    const response = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+      messages: [
+        { role: 'user', content: 'Say "Hello AI!"' }
+      ]
+    });
+    results.ai.status = response.response ? '✅ 正常' : '❌ 无响应';
+    results.ai.sample = response.response?.substring(0, 100);
+  } catch (e) {
+    results.ai.status = '❌ 错误';
+    results.ai.error = e.message;
+  }
+
+  return jsonResponse({
+    message: '存储服务测试报告',
+    timestamp: new Date().toISOString(),
+    results
+  });
+}
+
+// 1. 首页 - 带功能切换
+function homePage() {
+  return new Response(`
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Worker 功能演示中心</title>
+    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+    <script>new VConsole();</script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+        }
+        .nav-tab {
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: white;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: rgba(255,255,255,0.3);
+            border-color: #4ade80;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .section {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        .section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card h3 {
+            color: #4ade80;
+            margin-bottom: 15px;
+        }
+        .card p {
+            opacity: 0.9;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .btn {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .btn-primary { background: #4ade80; color: #1f2937; }
+        .demo-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .result-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .storage-info {
+            background: rgba(255,255,255,0.1);
+            border-left: 4px solid #4ade80;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        .status-ok { color: #4ade80; }
+        .status-error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>☁️ Cloudflare Worker 功能演示中心</h1>
+        <p>体验 Workers、KV、D1、R2、AI 等强大功能</p>
+    </div>
+    
+    <div class="nav-tabs">
+        <a href="#api" class="nav-tab active" onclick="showSection('api')">🌐 API 服务</a>
+        <a href="#kv" class="nav-tab" onclick="showSection('kv')">💾 KV 存储</a>
+        <a href="#d1" class="nav-tab" onclick="showSection('d1')">🗄️ D1 数据库</a>
+        <a href="#r2" class="nav-tab" onclick="showSection('r2')">📁 R2 存储</a>
+        <a href="#ai" class="nav-tab" onclick="showSection('ai')">🤖 AI 对话</a>
+    </div>
+    
+    <div class="container">
+        <!-- API 服务 -->
+        <div id="api" class="section active">
+            <div class="grid">
+                <div class="card">
+                    <h3>🕐 时间服务</h3>
+                    <p>获取当前服务器时间</p>
+                    <div class="demo-box">
+                        <button class="btn btn-primary" onclick="fetchData('/api/time', 'time-result')">获取时间</button>
+                        <div id="time-result" class="result-box">点击按钮获取时间...</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>🌤️ 天气查询</h3>
+                    <p>查询全球城市天气信息</p>
+                    <div class="demo-box">
+                        <div class="input-group">
+                            <input type="text" id="weather-city" placeholder="输入城市名（如: Beijing）" value="Beijing">
+                            <button class="btn btn-primary" onclick="fetchWeather()">查询</button>
+                        </div>
+                        <div id="weather-result" class="result-box">输入城市名查询天气...</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>📊 计数器</h3>
+                    <p>演示状态管理</p>
+                    <div class="demo-box">
+                        <button class="btn btn-primary" onclick="fetchData('/api/counter', 'counter-result')">获取</button>
+                        <button class="btn" onclick="fetch('/counter?action=increment'); setTimeout(()=>fetchData('/api/counter', 'counter-result'), 100)">+1</button>
+                        <button class="btn" onclick="fetch('/counter?action=reset'); setTimeout(()=>fetchData('/api/counter', 'counter-result'), 100)">重置</button>
+                        <div id="counter-result" class="result-box">当前计数: 0</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>🔗 URL 短链</h3>
+                    <p>创建短链接</p>
+                    <div class="demo-box">
+                        <div class="input-group">
+                            <input type="text" id="long-url" placeholder="输入长链接" value="https://www.example.com">
+                            <button class="btn btn-primary" onclick="createShortUrl()">创建</button>
+                        </div>
+                        <div id="shorturl-result" class="result-box"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🧪 全功能测试</h3>
+                    <p>一键测试 KV、R2、D1、AI</p>
+                    <div class="demo-box">
+                        <button class="btn btn-primary" onclick="fetchData('/api/test-all', 'test-all-result')">运行测试</button>
+                        <div id="test-all-result" class="result-box">点击运行完整测试...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- KV 存储 -->
+        <div id="kv" class="section">
+            <div class="storage-info">
+                <strong>💾 Cloudflare KV</strong> - 全球分布式键值存储，适合缓存、配置、会话数据
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <h3>📝 KV 操作演示</h3>
+                    <div class="demo-box">
+                        <div class="input-group">
+                            <input type="text" id="kv-key" placeholder="键名" style="flex: 1">
+                            <input type="text" id="kv-value" placeholder="值" style="flex: 2">
+                        </div>
+                        <button class="btn btn-primary" onclick="kvSet()">存储</button>
+                        <button class="btn" onclick="kvGet()">读取</button>
+                        <button class="btn" onclick="kvDelete()">删除</button>
+                        <button class="btn" onclick="kvList()">列出</button>
+                        <div id="kv-result" class="result-box"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- D1 数据库 -->
+        <div id="d1" class="section">
+            <div class="storage-info">
+                <strong>🗄️ Cloudflare D1</strong> - 基于 SQLite 的边缘数据库，支持 SQL 查询
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <h3>📝 D1 数据库演示</h3>
+                    <div class="demo-box">
+                        <h4>待办事项 (Todos)</h4>
+                        <div class="input-group">
+                            <input type="text" id="todo-text" placeholder="输入待办事项">
+                            <button class="btn btn-primary" onclick="addTodo()">添加</button>
+                        </div>
+                        <button class="btn" onclick="listTodos()">列出所有</button>
+                        <button class="btn" onclick="clearTodos()">清空</button>
+                        <div id="d1-result" class="result-box"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- R2 存储 -->
+        <div id="r2" class="section">
+            <div class="storage-info">
+                <strong>📁 Cloudflare R2</strong> - S3 兼容的对象存储，零出口费用
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <h3>📝 R2 存储演示</h3>
+                    <div class="demo-box">
+                        <div class="input-group">
+                            <input type="text" id="r2-key" placeholder="文件名">
+                            <input type="text" id="r2-content" placeholder="文件内容">
+                        </div>
+                        <button class="btn btn-primary" onclick="r2Put()">上传</button>
+                        <button class="btn" onclick="r2Get()">下载</button>
+                        <button class="btn" onclick="r2Delete()">删除</button>
+                        <button class="btn" onclick="r2List()">列出</button>
+                        <div id="r2-result" class="result-box"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI 对话 -->
+        <div id="ai" class="section">
+            <div class="grid">
+                <div class="card">
+                    <h3>🤖 AI 对话</h3>
+                    <p>使用 Cloudflare Workers AI 运行 Llama-2 大语言模型</p>
+                    <div class="demo-box">
+                        <div class="input-group">
+                            <input type="text" id="ai-prompt" placeholder="输入你的问题..." style="flex: 1">
+                            <button class="btn btn-primary" onclick="askAI()">发送</button>
+                        </div>
+                        <div id="ai-result" class="result-box"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        async function fetchData(url, resultId) {
+            const resultBox = document.getElementById(resultId);
+            resultBox.textContent = '加载中...';
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                resultBox.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                resultBox.textContent = '错误: ' + e.message;
+            }
+        }
+        
+        async function fetchWeather() {
+            const city = document.getElementById('weather-city').value;
+            fetchData('/api/weather?city=' + encodeURIComponent(city), 'weather-result');
+        }
+        
+        async function createShortUrl() {
+            const url = document.getElementById('long-url').value;
+            const resultBox = document.getElementById('shorturl-result');
+            try {
+                const response = await fetch('/api/shorten?url=' + encodeURIComponent(url));
+                const data = await response.json();
+                resultBox.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                resultBox.textContent = '错误: ' + e.message;
+            }
+        }
+        
+        async function kvSet() {
+            const key = document.getElementById('kv-key').value;
+            const value = document.getElementById('kv-value').value;
+            fetchData('/api/kv?action=set&key=' + encodeURIComponent(key) + '&value=' + encodeURIComponent(value), 'kv-result');
+        }
+        async function kvGet() {
+            const key = document.getElementById('kv-key').value;
+            fetchData('/api/kv?action=get&key=' + encodeURIComponent(key), 'kv-result');
+        }
+        async function kvDelete() {
+            const key = document.getElementById('kv-key').value;
+            fetchData('/api/kv?action=delete&key=' + encodeURIComponent(key), 'kv-result');
+        }
+        async function kvList() {
+            fetchData('/api/kv?action=list', 'kv-result');
+        }
+        
+        async function addTodo() {
+            const text = document.getElementById('todo-text').value;
+            fetchData('/api/d1?action=add&text=' + encodeURIComponent(text), 'd1-result');
+        }
+        async function listTodos() {
+            fetchData('/api/d1?action=list', 'd1-result');
+        }
+        async function clearTodos() {
+            fetchData('/api/d1?action=clear', 'd1-result');
+        }
+        
+        async function r2Put() {
+            const key = document.getElementById('r2-key').value;
+            const content = document.getElementById('r2-content').value;
+            fetchData('/api/r2?action=put&key=' + encodeURIComponent(key) + '&content=' + encodeURIComponent(content), 'r2-result');
+        }
+        async function r2Get() {
+            const key = document.getElementById('r2-key').value;
+            fetchData('/api/r2?action=get&key=' + encodeURIComponent(key), 'r2-result');
+        }
+        async function r2Delete() {
+            const key = document.getElementById('r2-key').value;
+            fetchData('/api/r2?action=delete&key=' + encodeURIComponent(key), 'r2-result');
+        }
+        async function r2List() {
+            fetchData('/api/r2?action=list', 'r2-result');
+        }
+        
+        async function askAI() {
+            const prompt = document.getElementById('ai-prompt').value;
+            const resultBox = document.getElementById('ai-result');
+            resultBox.textContent = '思考中...';
+            try {
+                const response = await fetch('/api/ai?prompt=' + encodeURIComponent(prompt));
+                const data = await response.json();
+                resultBox.textContent = '问题: ' + data.prompt + '\\n\\n回答: ' + data.response;
+            } catch (e) {
+                resultBox.textContent = '错误: ' + e.message;
+            }
+        }
+    </script>
+</body>
+</html>
+  `, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+}
+
+// 其他 API 函数
+function apiTime() {
+  const now = new Date();
+  return jsonResponse({
+    timestamp: now.toISOString(),
+    beijing: now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+    unix: Math.floor(now.getTime() / 1000)
+  });
+}
+
+async function apiWeather(request) {
+  const url = new URL(request.url);
+  const city = url.searchParams.get('city') || 'Beijing';
+  
+  try {
+    const response = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    
+    if (!response.ok) {
+      return jsonResponse({ 
+        city: city,
+        error: '获取天气失败',
+        note: '请尝试使用英文城市名，如: Beijing, Shanghai, Tokyo, London'
+      });
+    }
+    
+    const data = await response.json();
+    const current = data.current_condition?.[0];
+    
+    if (!current) {
+      return jsonResponse({ 
+        city: city,
+        error: '未找到该城市的天气数据'
+      });
+    }
+    
+    return jsonResponse({
+      city: city,
+      temperature: current.temp_C + '°C',
+      condition: current.lang_zh?.[0]?.value || current.weatherDesc?.[0]?.value || '未知',
+      humidity: current.humidity + '%',
+      wind: current.windspeedKmph + ' km/h'
+    });
+  } catch (e) {
+    return jsonResponse({ 
+      city: city,
+      error: '获取天气失败',
+      message: e.message
+    }, 500);
+  }
+}
+
+async function apiAI(request, env) {
+  const url = new URL(request.url);
+  const prompt = url.searchParams.get('prompt') || '你好';
+  
+  try {
+    const response = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+      messages: [
+        { role: 'system', content: '你是一个 helpful 的助手，用中文回答。' },
+        { role: 'user', content: prompt }
+      ]
+    });
+    
+    return jsonResponse({
+      prompt: prompt,
+      response: response.response,
+      model: 'llama-2-7b-chat'
+    });
+  } catch (e) {
+    return jsonResponse({ 
+      prompt: prompt,
+      response: 'AI 服务暂时不可用',
+      error: e.message
+    });
+  }
+}
+
+async function counterPage(request, env) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action');
+  
+  if (action === 'increment') {
+    memoryStore.counter++;
+  } else if (action === 'reset') {
+    memoryStore.counter = 0;
+  }
+  
+  return Response.redirect('/', 302);
+}
+
+function apiCounter(request, env) {
+  return jsonResponse({ count: memoryStore.counter });
+}
+
+function apiShorten(request, env) {
+  const url = new URL(request.url);
+  const longUrl = url.searchParams.get('url');
+  
+  if (!longUrl) {
+    return jsonResponse({ error: '请提供 url 参数' }, 400);
+  }
+  
+  const shortCode = Math.random().toString(36).substring(2, 8);
+  memoryStore.shortUrls.set(shortCode, longUrl);
+  
+  return jsonResponse({
+    original: longUrl,
+    short: `${url.origin}/s/${shortCode}`,
+    code: shortCode
+  });
+}
+
+function redirectShortUrl(path, env) {
+  const shortCode = path.replace('/s/', '');
+  const longUrl = memoryStore.shortUrls.get(shortCode);
+  
+  if (longUrl) {
+    return Response.redirect(longUrl, 302);
+  }
+  return notFound();
+}
+
+// KV API - 使用真正的 Cloudflare KV
+async function apiKV(request, env) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action');
+  const key = url.searchParams.get('key');
+  const value = url.searchParams.get('value');
+  
+  try {
+    switch (action) {
+      case 'set':
+        if (!key) return jsonResponse({ error: '需要 key 参数' }, 400);
+        await env.CACHE.put(key, value);
+        return jsonResponse({ action: 'set', key, value, status: '✅ 已存储到 KV' });
+      
+      case 'get':
+        if (!key) return jsonResponse({ error: '需要 key 参数' }, 400);
+        const got = await env.CACHE.get(key);
+        return jsonResponse({ action: 'get', key, value: got, found: got !== null });
+      
+      case 'delete':
+        if (!key) return jsonResponse({ error: '需要 key 参数' }, 400);
+        await env.CACHE.delete(key);
+        return jsonResponse({ action: 'delete', key, status: '✅ 已删除' });
+      
+      case 'list':
+        const list = await env.CACHE.list();
+        const keys = list.keys.map(k => k.name);
+        return jsonResponse({ action: 'list', keys, count: keys.length });
+      
+      default:
+        return jsonResponse({ error: '未知操作' }, 400);
+    }
+  } catch (e) {
+    return jsonResponse({ error: 'KV 操作失败', message: e.message }, 500);
+  }
+}
+
+// D1 API - 使用真正的 Cloudflare D1
+async function apiD1(request, env) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action');
+  const text = url.searchParams.get('text');
+  
+  try {
+    switch (action) {
+      case 'add':
+        if (!text) return jsonResponse({ error: '需要 text 参数' }, 400);
+        // 使用 prepare().run() 插入数据
+        const stmt = env.DB.prepare('INSERT INTO todos (text) VALUES (?)').bind(text);
+        const result = await stmt.run();
+        return jsonResponse({ 
+          action: 'add', 
+          result: {
+            success: result.success,
+            meta: result.meta
+          },
+          status: '✅ 已添加' 
+        });
+      
+      case 'list':
+        const listStmt = env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC');
+        const listResult = await listStmt.all();
+        return jsonResponse({ 
+          action: 'list', 
+          todos: listResult.results || [], 
+          count: (listResult.results || []).length,
+          meta: listResult.meta
+        });
+      
+      case 'clear':
+        const clearStmt = env.DB.prepare('DELETE FROM todos');
+        const clearResult = await clearStmt.run();
+        return jsonResponse({ 
+          action: 'clear', 
+          result: {
+            success: clearResult.success,
+            meta: clearResult.meta
+          },
+          status: '✅ 已清空' 
+        });
+      
+      default:
+        return jsonResponse({ error: '未知操作' }, 400);
+    }
+  } catch (e) {
+    return jsonResponse({ 
+      error: 'D1 操作失败', 
+      message: e.message, 
+      stack: e.stack,
+      type: e.constructor.name 
+    }, 500);
+  }
+}
+
+// R2 API - 使用真正的 Cloudflare R2
+async function apiR2(request, env) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action');
+  const key = url.searchParams.get('key');
+  const content = url.searchParams.get('content');
+  
+  try {
+    switch (action) {
+      case 'put':
+        if (!key) return jsonResponse({ error: '需要 key 参数' }, 400);
+        await env.STORAGE.put(key, content);
+        return jsonResponse({ action: 'put', key, size: content?.length || 0, status: '✅ 已上传' });
+      
+      case 'get':
+        if (!key) return jsonResponse({ error: '需要 key 参数' }, 400);
+        const object = await env.STORAGE.get(key);
+        if (!object) {
+          return jsonResponse({ action: 'get', key, found: false });
+        }
+        const text = await object.text();
+        return jsonResponse({ action: 'get', key, found: true, content: text, size: text.length });
+      
+      case 'delete':
+        if (!key) return jsonResponse({ error: '需要 key 参数' }, 400);
+        await env.STORAGE.delete(key);
+        return jsonResponse({ action: 'delete', key, status: '✅ 已删除' });
+      
+      case 'list':
+        const listed = await env.STORAGE.list();
+        const files = listed.objects.map(obj => ({
+          key: obj.key,
+          size: obj.size,
+          uploaded: obj.uploaded
+        }));
+        return jsonResponse({ action: 'list', files, count: files.length });
+      
+      default:
+        return jsonResponse({ error: '未知操作' }, 400);
+    }
+  } catch (e) {
+    return jsonResponse({ error: 'R2 操作失败', message: e.message }, 500);
+  }
+}
+
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Access-Control-Allow-Origin': '*'
+    }
+  });
+}
+
+function notFound() {
+  return new Response('404 Not Found', { status: 404 });
+}
+
+// TodoList H5 页面 - 移动端优化
+function todoPage() {
+  return new Response(`
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>📋 TodoList</title>
+    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+    <script>new VConsole();</script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            min-height: 100vh;
+            padding: 0;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            margin: -20px -20px 20px -20px;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ff6b6b;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        .input-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .todo-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        .todo-input:focus {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+        }
+        
+        .add-btn {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .add-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .add-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .todo-list {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: 200px;
+        }
+        
+        .todo-list h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .todo-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+        
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+        
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #999;
+        }
+        
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #ff6b6b;
+            border-radius: 50%;
+            margin-right: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        
+        .checkbox.checked {
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            border-color: transparent;
+        }
+        
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .todo-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .todo-text {
+            font-size: 16px;
+            color: #333;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+        
+        .todo-time {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        .delete-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: #ff6b6b;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        
+        .delete-btn:active {
+            transform: scale(0.9);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .empty-state-text {
+            font-size: 16px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #ff6b6b;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6b6b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            background: #4ade80;
+        }
+        
+        .toast.error {
+            background: #ff6b6b;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 20px 15px;
+                margin: -15px -15px 15px -15px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .add-btn {
+                width: 100%;
+            }
+            
+            .todo-item {
+                padding: 12px;
+            }
+            
+            .todo-text {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 TodoList</h1>
+            <p>记录你的待办事项</p>
+            <a href="/tags" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;">🏷️ 标签管理</a>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="total-count">0</div>
+                <div class="stat-label">总任务</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="pending-count">0</div>
+                <div class="stat-label">待完成</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="completed-count">0</div>
+                <div class="stat-label">已完成</div>
+            </div>
+        </div>
+        
+        <div class="export-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center;">
+            <button class="export-btn" onclick="exportTodos()" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                📥 导出数据 (JSON)
+            </button>
+            <p style="font-size: 12px; color: #999; margin-top: 8px;">导出所有待办事项，包括已完成的</p>
+        </div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="200">
+                <button class="add-btn" id="add-btn" onclick="addTodo()">添加</button>
+            </div>
+            <div class="tags-select" id="tags-select" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
+                <span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span>
+                <span style="font-size: 12px; color: #999;">加载中...</span>
+            </div>
+        </div>
+        
+        <div class="todo-list" id="todo-list">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 15px;">加载中...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        let todos = [];
+        let selectedTags = [];
+        let allTags = [];
+        
+        // 页面加载时获取数据
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('页面加载完成，开始加载数据...');
+            loadTodos();
+            loadTags();
+            
+            // 回车键添加
+            document.getElementById('todo-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addTodo();
+                }
+            });
+        });
+        
+        // 加载标签列表
+        async function loadTags() {
+            console.log('开始加载标签列表...');
+            try {
+                const response = await fetch('/api/tags');
+                console.log('标签列表响应:', response.status);
+                const data = await response.json();
+                console.log('标签列表数据:', data);
+                
+                if (data.success) {
+                    allTags = data.tags || [];
+                    renderTagSelect();
+                }
+            } catch (e) {
+                console.error('加载标签失败:', e);
+            }
+        }
+        
+        // 渲染标签选择器
+        function renderTagSelect() {
+            const container = document.getElementById('tags-select');
+            
+            if (allTags.length === 0) {
+                container.innerHTML = '<span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span><a href="/tags" style="font-size: 12px; color: #ff6b6b;">还没有标签，去创建 →</a>';
+                return;
+            }
+            
+            let html = '<span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span>';
+            
+            allTags.forEach(tag => {
+                const isSelected = selectedTags.includes(tag);
+                html += '<span onclick="toggleTag(' + JSON.stringify(tag).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (isSelected ? 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)' : '#f0f0f0') + '; color: ' + (isSelected ? 'white' : '#666') + '; border: 1px solid ' + (isSelected ? 'transparent' : '#ddd') + ';">' + escapeHtml(tag) + '</span>';
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 切换标签选择
+        function toggleTag(tag) {
+            if (selectedTags.includes(tag)) {
+                selectedTags = selectedTags.filter(t => t !== tag);
+            } else {
+                selectedTags.push(tag);
+            }
+            renderTagSelect();
+        }
+        
+        // 显示提示
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+        
+        // 加载待办列表
+        async function loadTodos() {
+            console.log('开始加载待办列表...');
+            try {
+                const response = await fetch('/api/todos');
+                console.log('待办列表响应:', response.status);
+                const data = await response.json();
+                console.log('待办列表数据:', data);
+                
+                if (data.todos) {
+                    todos = data.todos;
+                    renderTodos();
+                    updateStats();
+                }
+            } catch (e) {
+                console.error('加载待办失败:', e);
+                showToast('加载失败: ' + e.message, 'error');
+                document.getElementById('todo-list').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">加载失败，请刷新重试</div></div>';
+            }
+        }
+        
+        // 渲染待办列表
+        function renderTodos() {
+            const listEl = document.getElementById('todo-list');
+            
+            if (todos.length === 0) {
+                listEl.innerHTML = '<h2>📝 待办事项</h2><div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">暂无待办事项，添加一个吧！</div></div>';
+                return;
+            }
+            
+            let html = '<h2>📝 待办事项</h2>';
+            
+            todos.forEach(todo => {
+                const date = new Date(todo.created_at);
+                const timeStr = date.toLocaleString('zh-CN', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                // 渲染标签
+                let tagsHtml = '';
+                if (todo.tags && todo.tags.length > 0) {
+                    tagsHtml = '<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;">';
+                    todo.tags.forEach(tag => {
+                        tagsHtml += '<span style="padding: 2px 8px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 10px; font-size: 11px;">' + escapeHtml(tag) + '</span>';
+                    });
+                    tagsHtml += '</div>';
+                }
+                
+                html += '<div class="todo-item ' + (todo.done ? 'completed' : '') + '" data-id="' + todo.id + '">' +
+                    '<div class="checkbox ' + (todo.done ? 'checked' : '') + '" onclick="toggleTodo(' + todo.id + ')"></div>' +
+                    '<div class="todo-content">' +
+                        '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
+                        tagsHtml +
+                        '<div class="todo-time">' + timeStr + '</div>' +
+                    '</div>' +
+                    '<button class="delete-btn" onclick="deleteTodo(' + todo.id + ')">×</button>' +
+                '</div>';
+            });
+            
+            listEl.innerHTML = html;
+        }
+        
+        // 更新统计
+        function updateStats() {
+            const total = todos.length;
+            const completed = todos.filter(t => t.done).length;
+            const pending = total - completed;
+            
+            document.getElementById('total-count').textContent = total;
+            document.getElementById('pending-count').textContent = pending;
+            document.getElementById('completed-count').textContent = completed;
+        }
+        
+        // 添加待办
+        async function addTodo() {
+            const input = document.getElementById('todo-input');
+            const btn = document.getElementById('add-btn');
+            const text = input.value.trim();
+            
+            if (!text) {
+                showToast('请输入待办事项', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '添加中...';
+            
+            try {
+                const response = await fetch('/api/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        text: text,
+                        tags: selectedTags
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    input.value = '';
+                    selectedTags = [];
+                    renderTagSelect();
+                    todos.unshift(data.todo);
+                    renderTodos();
+                    updateStats();
+                    showToast('添加成功！');
+                } else {
+                    showToast(data.error || '添加失败', 'error');
+                }
+            } catch (e) {
+                showToast('添加失败: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '添加';
+            }
+        }
+        
+        // 切换完成状态
+        async function toggleTodo(id) {
+            const todo = todos.find(t => t.id === id);
+            if (!todo) return;
+            
+            try {
+                const response = await fetch('/api/todos/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ done: !todo.done })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    todo.done = !todo.done;
+                    renderTodos();
+                    updateStats();
+                    showToast(todo.done ? '已完成！' : '已取消完成');
+                }
+            } catch (e) {
+                showToast('操作失败: ' + e.message, 'error');
+            }
+        }
+        
+        // 删除待办
+        async function deleteTodo(id) {
+            if (!confirm('确定要删除这个待办事项吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/todos/' + id, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    todos = todos.filter(t => t.id !== id);
+                    renderTodos();
+                    updateStats();
+                    showToast('删除成功！');
+                }
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+        
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 导出待办数据
+        async function exportTodos() {
+            try {
+                showToast('正在准备导出...');
+                
+                // 获取所有数据
+                const response = await fetch('/api/todos/export');
+                
+                if (!response.ok) {
+                    throw new Error('导出失败: ' + response.status);
+                }
+                
+                // 获取文件名
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = 'todos-export.json';
+                if (disposition) {
+                    const match = disposition.match(/filename="(.+)"/);
+                    if (match) filename = match[1];
+                }
+                
+                // 下载文件
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showToast('导出成功！');
+            } catch (e) {
+                showToast('导出失败: ' + e.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+  `, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+}
+
+// Tags 管理页面
+function tagsPage() {
+  return new Response(`
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🏷️ 标签管理</title>
+    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+    <script>new VConsole();</script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            min-height: 100vh;
+            padding: 0;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            margin: -20px -20px 20px -20px;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .back-link {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .input-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tag-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        .tag-input:focus {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+        }
+        
+        .add-btn {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .add-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .add-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .tags-list {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: 200px;
+        }
+        
+        .tags-list h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .tag-item {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            color: white;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .tag-delete {
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        
+        .tag-delete:hover {
+            opacity: 1;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            background: #4ade80;
+        }
+        
+        .toast.error {
+            background: #ff6b6b;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 20px 15px;
+                margin: -15px -15px 15px -15px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .add-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/todos" class="back-link">← 返回</a>
+            <h1>🏷️ 标签管理</h1>
+        </div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" class="tag-input" id="tag-input" placeholder="输入新标签名称..." maxlength="20">
+                <button class="add-btn" id="add-btn" onclick="addTag()">添加</button>
+            </div>
+        </div>
+        
+        <div class="tags-list" id="tags-list">
+            <h2>所有标签</h2>
+            <div class="loading" style="text-align: center; padding: 40px;">
+                加载中...
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        let tags = [];
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTags();
+            
+            document.getElementById('tag-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addTag();
+                }
+            });
+        });
+        
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+        
+        async function loadTags() {
+            try {
+                const response = await fetch('/api/tags');
+                const data = await response.json();
+                
+                if (data.success) {
+                    tags = data.tags || [];
+                    renderTags();
+                }
+            } catch (e) {
+                showToast('加载失败: ' + e.message, 'error');
+            }
+        }
+        
+        function renderTags() {
+            const listEl = document.getElementById('tags-list');
+            
+            if (tags.length === 0) {
+                listEl.innerHTML = '<h2>所有标签</h2><div class="empty-state"><div class="empty-state-icon">🏷️</div><div>暂无标签，添加一个吧！</div></div>';
+                return;
+            }
+            
+            let html = '<h2>所有标签</h2>';
+            tags.forEach(tag => {
+                html += '<div class="tag-item">' + escapeHtml(tag) + '<span class="tag-delete" onclick="deleteTag(\'' + escapeHtml(tag) + '\')">×</span></div>';
+            });
+            
+            listEl.innerHTML = html;
+        }
+        
+        async function addTag() {
+            const input = document.getElementById('tag-input');
+            const btn = document.getElementById('add-btn');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showToast('请输入标签名称', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '添加中...';
+            
+            try {
+                const response = await fetch('/api/tags', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    input.value = '';
+                    tags = data.tags;
+                    renderTags();
+                    showToast('添加成功！');
+                } else {
+                    showToast(data.error || '添加失败', 'error');
+                }
+            } catch (e) {
+                showToast('添加失败: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '添加';
+            }
+        }
+        
+        async function deleteTag(name) {
+            if (!confirm('确定要删除标签 "' + name + '" 吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/tags/' + encodeURIComponent(name), {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    tags = data.tags;
+                    renderTags();
+                    showToast('删除成功！');
+                }
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+  `, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+}
+
+// TodoList REST API
+async function apiTodos(request, env) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method;
+  
+  try {
+    // 确保表存在 - 使用 prepare().run() 而不是 exec
+    try {
+      // 创建表（如果不存在）
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS todos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          text TEXT NOT NULL,
+          done INTEGER DEFAULT 0,
+          tags TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+      
+      // 尝试添加 tags 列（如果表已存在但缺少该列）
+      try {
+        await env.DB.prepare('ALTER TABLE todos ADD COLUMN tags TEXT').run();
+      } catch (alterErr) {
+        // 列已存在或表刚创建，忽略错误
+      }
+    } catch (e) {
+      // 忽略错误
+    }
+    
+    // GET /api/todos - 获取所有待办
+    if (method === 'GET' && path === '/api/todos') {
+      const result = await env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC').all();
+      const todos = (result.results || []).map(todo => ({
+        ...todo,
+        tags: todo.tags ? JSON.parse(todo.tags) : []
+      }));
+      return jsonResponse({ 
+        success: true, 
+        todos: todos
+      });
+    }
+    
+    // POST /api/todos - 创建待办
+    if (method === 'POST' && path === '/api/todos') {
+      const body = await request.json();
+      const text = body.text?.trim();
+      const tags = body.tags || [];
+      
+      if (!text) {
+        return jsonResponse({ success: false, error: '待办事项不能为空' }, 400);
+      }
+      
+      // 插入数据 - 使用 prepare().run()
+      await env.DB.prepare('INSERT INTO todos (text, tags) VALUES (?, ?)').bind(text, JSON.stringify(tags)).run();
+      
+      // 获取刚插入的数据
+      const result = await env.DB.prepare('SELECT * FROM todos ORDER BY id DESC LIMIT 1').all();
+      const todo = result.results?.[0];
+      if (todo) {
+        todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
+      }
+      
+      return jsonResponse({ success: true, todo });
+    }
+    
+    // PUT /api/todos/:id - 更新待办
+    if (method === 'PUT' && path.match(/^\/api\/todos\/\d+$/)) {
+      const id = parseInt(path.split('/').pop());
+      const body = await request.json();
+      
+      if (typeof body.done !== 'undefined') {
+        await env.DB.prepare('UPDATE todos SET done = ? WHERE id = ?').bind(body.done ? 1 : 0, id).run();
+      }
+      
+      if (body.text) {
+        await env.DB.prepare('UPDATE todos SET text = ? WHERE id = ?').bind(body.text, id).run();
+      }
+      
+      const result = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
+      const todo = result.results?.[0];
+      
+      return jsonResponse({ success: true, todo });
+    }
+    
+    // DELETE /api/todos/:id - 删除待办
+    if (method === 'DELETE' && path.match(/^\/api\/todos\/\d+$/)) {
+      const id = parseInt(path.split('/').pop());
+      await env.DB.prepare('DELETE FROM todos WHERE id = ?').bind(id).run();
+      return jsonResponse({ success: true });
+    }
+    
+    // GET /api/todos/export - 导出所有待办为 JSON 文件
+    if (method === 'GET' && path === '/api/todos/export') {
+      const result = await env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC').all();
+      const todos = (result.results || []).map(todo => ({
+        ...todo,
+        tags: todo.tags ? JSON.parse(todo.tags) : []
+      }));
+      
+      // 生成导出数据
+      const exportData = {
+        exportTime: new Date().toISOString(),
+        totalCount: todos.length,
+        completedCount: todos.filter(t => t.done).length,
+        pendingCount: todos.filter(t => !t.done).length,
+        todos: todos
+      };
+      
+      const jsonContent = JSON.stringify(exportData, null, 2);
+      const blob = new TextEncoder().encode(jsonContent);
+      
+      // 生成文件名
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `todos-export-${dateStr}.json`;
+      
+      return new Response(blob, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json;charset=UTF-8',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+    
+    return jsonResponse({ error: 'Not Found' }, 404);
+    
+  } catch (e) {
+    return jsonResponse({ 
+      success: false,
+      error: '操作失败', 
+      message: e.message 
+    }, 500);
+  }
+}
+
+// Tags API - 使用 KV 存储标签
+async function apiTags(request, env) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method;
+  const KV_KEY = 'tags_list';
+  
+  try {
+    // GET /api/tags - 获取所有标签
+    if (method === 'GET' && path === '/api/tags') {
+      const tagsJson = await env.CACHE.get(KV_KEY);
+      const tags = tagsJson ? JSON.parse(tagsJson) : [];
+      return jsonResponse({ success: true, tags });
+    }
+    
+    // POST /api/tags - 创建标签
+    if (method === 'POST' && path === '/api/tags') {
+      const body = await request.json();
+      const tagName = body.name?.trim();
+      
+      if (!tagName) {
+        return jsonResponse({ success: false, error: '标签名称不能为空' }, 400);
+      }
+      
+      // 获取现有标签
+      const tagsJson = await env.CACHE.get(KV_KEY);
+      let tags = tagsJson ? JSON.parse(tagsJson) : [];
+      
+      // 检查是否已存在
+      if (tags.includes(tagName)) {
+        return jsonResponse({ success: false, error: '标签已存在' }, 400);
+      }
+      
+      // 添加新标签
+      tags.push(tagName);
+      await env.CACHE.put(KV_KEY, JSON.stringify(tags));
+      
+      return jsonResponse({ success: true, tag: tagName, tags });
+    }
+    
+    // DELETE /api/tags/:name - 删除标签
+    if (method === 'DELETE' && path.match(/^\/api\/tags\/.+$/)) {
+      const tagName = decodeURIComponent(path.split('/').pop());
+      
+      // 获取现有标签
+      const tagsJson = await env.CACHE.get(KV_KEY);
+      let tags = tagsJson ? JSON.parse(tagsJson) : [];
+      
+      // 删除标签
+      tags = tags.filter(t => t !== tagName);
+      await env.CACHE.put(KV_KEY, JSON.stringify(tags));
+      
+      return jsonResponse({ success: true, tags });
+    }
+    
+    return jsonResponse({ error: 'Not Found' }, 404);
+    
+  } catch (e) {
+    return jsonResponse({ 
+      success: false,
+      error: '操作失败', 
+      message: e.message 
+    }, 500);
+  }
+}

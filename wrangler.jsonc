@@ -1,0 +1,28 @@
+{
+  "name": "my-first-worker",
+  "main": "src/index.js",
+  "compatibility_date": "2024-02-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": {
+    "binding": "AI"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "f60eb64d7e654e9eab69ddcb3647e00b"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "my-first-worker-storage"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-first-worker-db",
+      "database_id": "6e288743-119a-4d3e-8b37-7532e6c1fce8"
+    }
+  ]
+}
