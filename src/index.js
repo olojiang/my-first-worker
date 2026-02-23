@@ -1379,7 +1379,7 @@ async function todoPage(request, env) {
                 display: flex;
                 opacity: 1;
             }
-        }
+            
             .todo-item {
                 min-height: auto;
                 height: auto;
@@ -1393,11 +1393,6 @@ async function todoPage(request, env) {
                 margin-top: 10px;
                 opacity: 0;
                 max-width: 99%;
-            }
-            
-            .todo-item.selected .todo-actions {
-                display: flex;
-                opacity: 1;
             }
         }
         
