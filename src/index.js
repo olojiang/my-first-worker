@@ -1179,19 +1179,15 @@ async function todoPage(request, env) {
     <title>📋 TodoList</title>
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
     <script>
-        // 等待 VConsole 加载完成
-        (function() {
-            var checkVConsole = function() {
-                if (typeof VConsole !== 'undefined') {
-                    window.vConsole = new VConsole();
-                    console.log('[VConsole] 初始化成功');
-                } else {
-                    console.log('[VConsole] 等待加载...');
-                    setTimeout(checkVConsole, 100);
-                }
-            };
-            checkVConsole();
-        })();
+        // VConsole 初始化
+        window.onload = function() {
+            if (typeof VConsole !== 'undefined') {
+                window.vConsole = new VConsole();
+                console.log('[VConsole] 初始化成功');
+            } else {
+                console.error('[VConsole] 加载失败');
+            }
+        };
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
