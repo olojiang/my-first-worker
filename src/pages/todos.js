@@ -1370,10 +1370,10 @@ export async function todoPage(request, env) {
                 });
             }
             
-            // 5秒后自动隐藏
+            // 10秒后自动隐藏
             setTimeout(() => {
                 toast.classList.remove('show');
-            }, 5000);
+            }, 10000);
         }
         
         // 加载待办列表
