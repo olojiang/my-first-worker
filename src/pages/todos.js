@@ -46,6 +46,7 @@ export async function todoPage(request, env) {
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
     <style>
         * {
@@ -506,7 +507,7 @@ export async function todoPage(request, env) {
                 <textarea class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="500" style="min-height: 80px; resize: vertical; font-family: inherit;"></textarea>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <mdui-button id="add-btn" variant="filled" style="flex: 1;">添加</mdui-button>
-                    <mdui-button id="ai-optimize-btn" variant="tonal" icon="auto_fix_high" style="flex: 1;">AI 优化</mdui-button>
+                    <mdui-button id="ai-optimize-btn" variant="tonal" icon="auto_fix_normal" style="flex: 1;">AI 优化</mdui-button>
                 </div>
             </div>
             <div class="tags-select" id="tags-select" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
