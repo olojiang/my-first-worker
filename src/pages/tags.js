@@ -39,7 +39,7 @@ export function tagsPage() {
         .header {
             text-align: center;
             padding: 30px 20px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            background: linear-gradient(135deg, #4d4d4d 0%, #4c4e50 100%);
             margin: -20px -20px 20px -20px;
             color: white;
             position: sticky;
@@ -230,7 +230,7 @@ export function tagsPage() {
         <div class="input-section">
             <div class="input-group">
                 <input type="text" class="tag-input" id="tag-input" placeholder="输入新标签名称..." maxlength="20">
-                <button class="add-btn" id="add-btn">添加</button>
+                <mdui-button class="add-btn" id="add-btn" variant="filled">添加</mdui-button>
             </div>
         </div>
         
