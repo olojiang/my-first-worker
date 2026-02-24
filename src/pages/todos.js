@@ -487,9 +487,9 @@ export async function todoPage(request, env) {
             <!-- 状态筛选 -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <span style="font-size: 14px; color: #666;">筛选:</span>
-                <button id="filter-all" class="filter-btn active" style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 20px; cursor: pointer; font-size: 13px;">全部</button>
-                <button id="filter-pending" class="filter-btn" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">未完成</button>
-                <button id="filter-completed" class="filter-btn" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">已完成</button>
+                <mdui-button id="filter-all" class="filter-btn active" variant="filled">全部</mdui-button>
+                <mdui-button id="filter-pending" class="filter-btn" variant="tonal">未完成</mdui-button>
+                <mdui-button id="filter-completed" class="filter-btn" variant="tonal">已完成</mdui-button>
             </div>
             <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
         </div>
@@ -512,9 +512,7 @@ export async function todoPage(request, env) {
             </div>
             <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
                 <input type="file" id="file-input" style="display: none;" multiple accept="image/*,.txt,.json,.md,.csv,.js,.html,.css">
-                <button onclick="document.getElementById('file-input').click()" style="padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px;">
-                    <i class="fas fa-upload"></i> 添加附件
-                </button>
+                <mdui-button onclick="document.getElementById('file-input').click()" variant="outlined" icon="upload">添加附件</mdui-button>
                 <span style="font-size: 12px; color: #999;">支持图片、文本文件 (最大 5MB)</span>
             </div>
         </div>
@@ -1101,13 +1099,11 @@ export async function todoPage(request, env) {
             
             // 更新按钮样式
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.style.background = '#f0f0f0';
-                btn.style.color = '#666';
+                btn.setAttribute('variant', 'tonal');
             });
             
             const activeBtn = document.getElementById('filter-' + filter);
-            activeBtn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)';
-            activeBtn.style.color = 'white';
+            activeBtn.setAttribute('variant', 'filled');
             
             renderTodos();
         }
