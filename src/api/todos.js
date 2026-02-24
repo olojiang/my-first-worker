@@ -100,7 +100,7 @@ export async function apiTodos(request, env) {
 
         // 2. 获取共享给我的 todo
         const sharedResult = await env.DB.prepare(`
-          SELECT t.id, t.text, t.done, t.tags, t.attachments, t.created_at, t.updated_at, t.user_id, t.user_login, ts.owner_id as shared_by_id, ts.shared_with_login
+          SELECT t.id, t.text, t.done, t.tags, t.attachments, t.created_at, t.user_id, t.user_login, ts.owner_id as shared_by_id, ts.shared_with_login
           FROM todos t
           INNER JOIN todo_shares ts ON t.id = ts.todo_id
           WHERE ts.shared_with_id = ? OR ts.shared_with_login = ?
