@@ -836,11 +836,11 @@ export async function todoPage(request, env) {
                 if (data.success) {
                     // 创建信息弹窗
                     const overlay = document.createElement('div');
-                    overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+                    overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease;';
                     
                     const dialog = document.createElement('div');
-                    dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center;';
-                                        dialog.innerHTML = 
+                    dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center; transform: translate(-50%, -50%) scale(0.8); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);';
+                    dialog.innerHTML = 
                         '<h3 style="margin: 0 0 20px 0; color: #333;">Cloudflare Resources</h3>' +
                         '<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
@@ -873,10 +873,22 @@ export async function todoPage(request, env) {
                     overlay.appendChild(dialog);
                     document.body.appendChild(overlay);
                     
+                    // 触发动画
+                    requestAnimationFrame(() => {
+                        overlay.style.opacity = '1';
+                        dialog.style.transform = 'translate(0, 0) scale(1)';
+                        dialog.style.opacity = '1';
+                    });
+                    
                     // 点击遮罩关闭
                     overlay.addEventListener('click', (e) => {
                         if (e.target === overlay) {
-                            document.body.removeChild(overlay);
+                            overlay.style.opacity = '0';
+                            dialog.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                            dialog.style.opacity = '0';
+                            setTimeout(() => {
+                                document.body.removeChild(overlay);
+                            }, 300);
                         }
                     });
                 } else {
