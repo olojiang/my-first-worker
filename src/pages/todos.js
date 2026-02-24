@@ -549,6 +549,11 @@ export async function todoPage(request, env) {
     
     <div class="toast" id="toast"></div>
     
+    <!-- 刷新按钮 -->
+    <button id="refresh-btn" onclick="location.reload()" style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+    
     <script>
         let todos = [];
         let selectedTags = [];
