@@ -139,6 +139,8 @@ export default {
         return tagsPage();
       case '/api/tags':
         return apiTags(request, env);
+      case '/api/resources':
+        return apiResources(request, env);
       default:
         if (path.startsWith('/api/todos/') || path === '/api/todos/migrate') {
           return apiTodos(request, env);
@@ -1581,6 +1583,7 @@ async function todoPage(request, env) {
             <p>记录你的待办事项</p>
             ${userSection}
             <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
+            <button onclick="showResourceInfo()" style="position: absolute; left: 20px; top: 30%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.2); border: none; padding: 8px 12px; border-radius: 50%; cursor: pointer; font-size: 16px;"><i class="fas fa-info-circle"></i></button>
         </div>
         
         <div class="stats">
@@ -1940,6 +1943,60 @@ async function todoPage(request, env) {
             updateStats();
             showToast('已删除 ' + successCount + ' 项');
             exitMultiSelectMode();
+        }
+        
+        // 显示资源信息
+        async function showResourceInfo() {
+            console.log('[资源信息] 开始获取...');
+            
+            try {
+                const response = await fetch('/api/resources');
+                const data = await response.json();
+                console.log('[资源信息] 返回数据:', data);
+                
+                if (data.success) {
+                    // 创建信息弹窗
+                    const overlay = document.createElement('div');
+                    overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+                    
+                    const dialog = document.createElement('div');
+                    dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center;';
+                    
+                    dialog.innerHTML = 
+                        '<h3 style="margin: 0 0 20px 0; color: #333;"><i class="fas fa-server"></i> Cloudflare 资源</h3>' +
+                        '<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">' +
+                            '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
+                                '<div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">' + data.kv.count + '</div>' +
+                                '<div style="font-size: 14px; color: #666;">KV 存储条目</div>' +
+                            '</div>' +
+                            '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
+                                '<div style="font-size: 24px; font-weight: bold; color: #4ade80;">' + data.db.count + '</div>' +
+                                '<div style="font-size: 14px; color: #666;">D1 数据库记录</div>' +
+                            '</div>' +
+                            '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
+                                '<div style="font-size: 24px; font-weight: bold; color: #54a0ff;">' + data.r2.count + '</div>' +
+                                '<div style="font-size: 14px; color: #666;">R2 存储对象</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<button onclick="this.closest(\'.fixed-overlay\').remove()" style="padding: 10px 30px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">关闭</button>';
+                    
+                    overlay.className = 'fixed-overlay';
+                    overlay.appendChild(dialog);
+                    document.body.appendChild(overlay);
+                    
+                    // 点击遮罩关闭
+                    overlay.addEventListener('click', (e) => {
+                        if (e.target === overlay) {
+                            document.body.removeChild(overlay);
+                        }
+                    });
+                } else {
+                    showToast('获取资源信息失败', 'error');
+                }
+            } catch (e) {
+                console.error('[资源信息] 出错:', e);
+                showToast('获取资源信息失败: ' + e.message, 'error');
+            }
         }
         
         let currentFilter = 'pending'; // 默认筛选未完成的
@@ -3266,6 +3323,51 @@ async function apiTodos(request, env) {
     return jsonResponse({ 
       success: false,
       error: '操作失败', 
+      message: e.message 
+    }, 500);
+  }
+}
+
+// 获取资源使用情况
+async function apiResources(request, env) {
+  try {
+    // 获取 KV 数量
+    let kvCount = 0;
+    try {
+      const kvList = await env.CACHE.list();
+      kvCount = kvList.keys ? kvList.keys.length : 0;
+    } catch (e) {
+      console.error('获取 KV 数量失败:', e);
+    }
+    
+    // 获取 D1 记录数
+    let dbCount = 0;
+    try {
+      const dbResult = await env.DB.prepare('SELECT COUNT(*) as count FROM todos').all();
+      dbCount = dbResult.results?.[0]?.count || 0;
+    } catch (e) {
+      console.error('获取 D1 数量失败:', e);
+    }
+    
+    // 获取 R2 对象数
+    let r2Count = 0;
+    try {
+      const r2List = await env.STORAGE.list();
+      r2Count = r2List.objects ? r2List.objects.length : 0;
+    } catch (e) {
+      console.error('获取 R2 数量失败:', e);
+    }
+    
+    return jsonResponse({
+      success: true,
+      kv: { count: kvCount },
+      db: { count: dbCount },
+      r2: { count: r2Count }
+    });
+  } catch (e) {
+    return jsonResponse({ 
+      success: false,
+      error: '获取资源信息失败', 
       message: e.message 
     }, 500);
   }
