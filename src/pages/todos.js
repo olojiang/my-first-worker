@@ -1618,7 +1618,7 @@ export async function todoPage(request, env) {
                     // 显示创建者
                     if (todo.user_login) {
                         ownerHtml += '<div style="display: flex; align-items: center; gap: 6px; color: #666;">';
-                        ownerHtml += '<img src="https://github.com/' + encodeURIComponent(todo.user_login) + '.png?size=20" style="width: 16px; height: 16px; border-radius: 50%;" onerror="this.style.display=\'none\'">';
+                        ownerHtml += '<img src="https://github.com/' + encodeURIComponent(todo.user_login) + '.png?size=20" style="width: 16px; height: 16px; border-radius: 50%;">';
                         ownerHtml += '<span>创建者: ' + escapeHtml(todo.user_login) + '</span>';
                         ownerHtml += '</div>';
                     }
@@ -1638,7 +1638,7 @@ export async function todoPage(request, env) {
                         shares.forEach(share => {
                             const sharedUser = share.shared_with_login || share.shared_with_id;
                             ownerHtml += '<span style="display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; background: #f0f0f0; border-radius: 10px; font-size: 11px;">';
-                            ownerHtml += '<img src="https://github.com/' + encodeURIComponent(sharedUser) + '.png?size=16" style="width: 12px; height: 12px; border-radius: 50%;" onerror="this.style.display=\'none\'">';
+                            ownerHtml += '<img src="https://github.com/' + encodeURIComponent(sharedUser) + '.png?size=16" style="width: 12px; height: 12px; border-radius: 50%;">';
                             ownerHtml += escapeHtml(sharedUser);
                             ownerHtml += '</span>';
                         });
