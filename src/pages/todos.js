@@ -1353,17 +1353,12 @@ export async function todoPage(request, env) {
                     minute: '2-digit' 
                 });
                 
-                // 渲染标签 - 使用 MDUI chip，带颜色
+                // 渲染标签 - 使用 MDUI chip
                 let tagsHtml = '';
                 if (todo.tags && todo.tags.length > 0) {
                     tagsHtml = '<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;">';
                     todo.tags.forEach(tagName => {
-                        const tagObj = allTags.find(t => (typeof t === 'object' ? t.name : t) === tagName);
-                        const tagColor = tagObj && typeof tagObj === 'object' ? tagObj.color : null;
-                        const chipStyle = tagColor ? 
-                            'font-size: 11px; --mdui-comp-filter-chip-container-height: 24px; background-color: ' + tagColor + '; color: white;' : 
-                            'font-size: 11px; --mdui-comp-filter-chip-container-height: 24px;';
-                        tagsHtml += '<mdui-chip variant="filter" style="' + chipStyle + '">' + escapeHtml(tagName) + '</mdui-chip>';
+                        tagsHtml += '<mdui-chip variant="filter" style="font-size: 11px; --mdui-comp-filter-chip-container-height: 24px;">' + escapeHtml(tagName) + '</mdui-chip>';
                     });
                     tagsHtml += '</div>';
                 }
@@ -1455,11 +1450,13 @@ export async function todoPage(request, env) {
                         const tagColor = typeof tag === 'object' ? tag.color : null;
                         const isSelected = editTags.includes(tagName);
                         
-                        const chipStyle = tagColor ? 
-                            'font-size: 12px; --mdui-comp-filter-chip-container-height: 28px; background-color: ' + tagColor + '; color: white;' : 
-                            'font-size: 12px; --mdui-comp-filter-chip-container-height: 28px;';
-                        
-                        tagsHtml += '<mdui-chip class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" variant="filter" selectable ' + (isSelected ? 'selected' : '') + ' style="' + chipStyle + '">' + escapeHtml(tagName) + '</mdui-chip>';
+                        if (isSelected) {
+                            tagsHtml += '<span class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + ';">' + escapeHtml(tagName) + '</span>';
+                        } else if (tagColor) {
+                            tagsHtml += '<span class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: white; border: 1px solid transparent;">' + escapeHtml(tagName) + '</span>';
+                        } else {
+                            tagsHtml += '<span class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd;">' + escapeHtml(tagName) + '</span>';
+                        }
                     });
                     tagsHtml += '</div></div>';
                 }

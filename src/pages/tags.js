@@ -9,9 +9,6 @@ export function tagsPage() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🏷️ 标签管理</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
     <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
     <script>new VConsole();</script>
     <style>
@@ -233,7 +230,7 @@ export function tagsPage() {
         <div class="input-section">
             <div class="input-group">
                 <input type="text" class="tag-input" id="tag-input" placeholder="输入新标签名称..." maxlength="20">
-                <mdui-button class="add-btn" id="add-btn" variant="filled">添加</mdui-button>
+                <button class="add-btn" id="add-btn">添加</button>
             </div>
         </div>
         
@@ -289,21 +286,20 @@ export function tagsPage() {
                 // 支持新格式 {name, color} 和旧格式 string
                 const tagName = typeof tag === 'object' ? tag.name : tag;
                 const tagColor = typeof tag === 'object' ? tag.color : null;
-                const chipStyle = tagColor ? 
-                    'font-size: 14px; --mdui-comp-assist-chip-container-height: 36px; background-color: ' + tagColor + '; color: white;' : 
-                    'font-size: 14px; --mdui-comp-assist-chip-container-height: 36px;';
+                const bgStyle = tagColor ? 'background: ' + tagColor + ';' : 'background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);';
                 
-                html += '<mdui-chip class="tag-item" data-tag="' + escapeHtml(tagName) + '" variant="assist" deletable style="' + chipStyle + '">' + 
+                html += '<div class="tag-item" data-tag="' + escapeHtml(tagName) + '" style="' + bgStyle + '">' + 
                     escapeHtml(tagName) + 
-                    '</mdui-chip>';
+                    '<span class="tag-delete" data-index="' + index + '"><i class="fas fa-times"></i></span>' +
+                    '</div>';
             });
             
             listEl.innerHTML = html;
             
-            // 绑定 chip 删除事件
-            listEl.querySelectorAll('.tag-item').forEach(chip => {
-                chip.addEventListener('delete', (e) => {
-                    const tagName = e.target.dataset.tag;
+            // 绑定删除按钮点击事件
+            listEl.querySelectorAll('.tag-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tagName = e.target.closest('.tag-item').dataset.tag;
                     deleteTag(tagName);
                 });
             });
