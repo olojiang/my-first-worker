@@ -443,7 +443,7 @@ export async function todoPage(request, env) {
             <p>记录你的待办事项</p>
             ${userSection}
             <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
-            <mdui-button onclick="exportTodos()" variant="text" style="position: absolute; right: 20px; top: 70%; transform: translateY(-50%); color: white;">
+            <mdui-button onclick="exportTodos()" variant="text" style="position: absolute; right: 20px; top: 50%; margin-top: 35px; color: white;">
                 <mdui-icon name="download"></mdui-icon> 导出数据
             </mdui-button>
             <mdui-button-icon onclick="showResourceInfo()" icon="info" style="position: absolute; left: 20px; top: 30%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.2);"></mdui-button-icon>
