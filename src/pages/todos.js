@@ -2087,58 +2087,123 @@ export async function todoPage(request, env) {
             // 创建对话框
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+            overlay.className = 'share-dialog-overlay';
             
             const dialog = document.createElement('div');
             dialog.style.cssText = 'background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 450px; max-height: 80vh; overflow-y: auto;';
             
-            dialog.innerHTML = 
-                '<h3 style="margin: 0 0 20px 0; color: #333; font-size: 18px;"><i class="fas fa-share-alt" style="color: #f59e0b; margin-right: 8px;"></i>共享管理</h3>' +
-                '<div style="margin-bottom: 20px;">' +
-                    '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">创建者</div>' +
-                    '<div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px;">' +
-                        '<img src="https://github.com/' + escapeHtml(todo.user_login || '') + '.png?size=40" style="width: 32px; height: 32px; border-radius: 50%;" onerror="this.src=\'https://github.com/ghost.png?size=40\'">' +
-                        '<span style="font-weight: 500;">' + escapeHtml(todo.user_login || '未知') + '</span>' +
-                    '</div>' +
-                '</div>' +
-                '<div id="share-users-list" style="margin-bottom: 20px;">' +
-                    '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">已共享给</div>' +
-                    '<div id="shares-container" style="display: flex; flex-direction: column; gap: 8px;">' +
-                        (shares.length > 0 ? shares.map(s => 
-                            '<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 8px;">' +
-                                '<div style="display: flex; align-items: center; gap: 10px;">' +
-                                    '<img src="https://github.com/' + escapeHtml(s.shared_with_login || s.shared_with_id) + '.png?size=40" style="width: 32px; height: 32px; border-radius: 50%;" onerror="this.src=\'https://github.com/ghost.png?size=40\'">' +
-                                    '<span>' + escapeHtml(s.shared_with_login || s.shared_with_id) + '</span>' +
-                                '</div>' +
-                                (isOwner ? '<mdui-button-icon icon="delete" style="color: #ff6b6b;" onclick="removeShare(' + todoId + ', \'' + escapeHtml(s.shared_with_id) + '\')"></mdui-button-icon>' : '') +
-                            '</div>'
-                        ).join('') : '<div style="color: #999; font-size: 14px; padding: 10px;">暂无共享</div>') +
-                    '</div>' +
-                '</div>' +
-                (isOwner ? 
-                    '<div style="border-top: 1px solid #eee; padding-top: 20px;">' +
-                        '<div style="font-size: 14px; color: #666; margin-bottom: 10px;">添加共享</div>' +
-                        '<div style="display: flex; gap: 10px; margin-bottom: 10px;">' +
-                            '<mdui-text-field id="new-share-input" placeholder="输入 GitHub 用户名" style="flex: 1;"></mdui-text-field>' +
-                            '<mdui-button id="verify-user-btn" variant="tonal" icon="search">验证</mdui-button>' +
-                        '</div>' +
-                        '<div id="user-verify-result" style="margin-bottom: 10px;"></div>' +
-                        '<mdui-button id="add-share-confirm-btn" variant="filled" icon="person_add" disabled style="width: 100%;">添加共享</mdui-button>' +
-                    '</div>' : 
-                    '<div style="color: #999; font-size: 13px; text-align: center; padding-top: 10px;">只有创建者可以管理共享</div>') +
-                '<mdui-button onclick="this.closest(\'.share-dialog-overlay\').remove()" variant="text" style="width: 100%; margin-top: 15px;">关闭</mdui-button>';
+            // 构建对话框内容 - 使用 DOM 操作避免字符串转义问题
+            const title = document.createElement('h3');
+            title.style.cssText = 'margin: 0 0 20px 0; color: #333; font-size: 18px;';
+            title.innerHTML = '<i class="fas fa-share-alt" style="color: #f59e0b; margin-right: 8px;"></i>共享管理';
+            dialog.appendChild(title);
             
-            overlay.className = 'share-dialog-overlay';
-            overlay.appendChild(dialog);
-            document.body.appendChild(overlay);
+            // 创建者
+            const ownerSection = document.createElement('div');
+            ownerSection.style.marginBottom = '20px';
+            ownerSection.innerHTML = '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">创建者</div>';
             
+            const ownerBox = document.createElement('div');
+            ownerBox.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px;';
+            
+            const ownerImg = document.createElement('img');
+            ownerImg.src = 'https://github.com/' + encodeURIComponent(todo.user_login || 'ghost') + '.png?size=40';
+            ownerImg.style.cssText = 'width: 32px; height: 32px; border-radius: 50%;';
+            ownerImg.onerror = function() { this.src = 'https://github.com/ghost.png?size=40'; };
+            
+            const ownerName = document.createElement('span');
+            ownerName.style.fontWeight = '500';
+            ownerName.textContent = todo.user_login || '未知';
+            
+            ownerBox.appendChild(ownerImg);
+            ownerBox.appendChild(ownerName);
+            ownerSection.appendChild(ownerBox);
+            dialog.appendChild(ownerSection);
+            
+            // 已共享列表
+            const sharesSection = document.createElement('div');
+            sharesSection.style.marginBottom = '20px';
+            sharesSection.innerHTML = '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">已共享给</div>';
+            
+            const sharesContainer = document.createElement('div');
+            sharesContainer.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+            
+            if (shares.length > 0) {
+                shares.forEach(s => {
+                    const shareItem = document.createElement('div');
+                    shareItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 8px;';
+                    
+                    const userInfo = document.createElement('div');
+                    userInfo.style.cssText = 'display: flex; align-items: center; gap: 10px;';
+                    
+                    const userImg = document.createElement('img');
+                    const sharedUser = s.shared_with_login || s.shared_with_id || 'ghost';
+                    userImg.src = 'https://github.com/' + encodeURIComponent(sharedUser) + '.png?size=40';
+                    userImg.style.cssText = 'width: 32px; height: 32px; border-radius: 50%;';
+                    userImg.onerror = function() { this.src = 'https://github.com/ghost.png?size=40'; };
+                    
+                    const userName = document.createElement('span');
+                    userName.textContent = sharedUser;
+                    
+                    userInfo.appendChild(userImg);
+                    userInfo.appendChild(userName);
+                    shareItem.appendChild(userInfo);
+                    
+                    if (isOwner) {
+                        const removeBtn = document.createElement('button');
+                        removeBtn.innerHTML = '<i class="fas fa-trash" style="color: #ff6b6b;"></i>';
+                        removeBtn.style.cssText = 'background: none; border: none; cursor: pointer; padding: 5px;';
+                        removeBtn.onclick = () => removeShare(todoId, s.shared_with_id);
+                        shareItem.appendChild(removeBtn);
+                    }
+                    
+                    sharesContainer.appendChild(shareItem);
+                });
+            } else {
+                sharesContainer.innerHTML = '<div style="color: #999; font-size: 14px; padding: 10px;">暂无共享</div>';
+            }
+            
+            sharesSection.appendChild(sharesContainer);
+            dialog.appendChild(sharesSection);
+            
+            // 添加共享区域（仅创建者）
             if (isOwner) {
-                let verifiedUser = null;
+                const addSection = document.createElement('div');
+                addSection.style.cssText = 'border-top: 1px solid #eee; padding-top: 20px;';
+                addSection.innerHTML = '<div style="font-size: 14px; color: #666; margin-bottom: 10px;">添加共享</div>';
                 
-                // 验证用户按钮
-                const verifyBtn = dialog.querySelector('#verify-user-btn');
-                const verifyResult = dialog.querySelector('#user-verify-result');
-                const addConfirmBtn = dialog.querySelector('#add-share-confirm-btn');
-                const input = dialog.querySelector('#new-share-input');
+                const inputRow = document.createElement('div');
+                inputRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'new-share-input';
+                input.placeholder = '输入 GitHub 用户名';
+                input.style.cssText = 'flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;';
+                
+                const verifyBtn = document.createElement('button');
+                verifyBtn.innerHTML = '<i class="fas fa-search"></i> 验证';
+                verifyBtn.style.cssText = 'padding: 10px 15px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer;';
+                
+                inputRow.appendChild(input);
+                inputRow.appendChild(verifyBtn);
+                addSection.appendChild(inputRow);
+                
+                const verifyResult = document.createElement('div');
+                verifyResult.id = 'user-verify-result';
+                verifyResult.style.marginBottom = '10px';
+                addSection.appendChild(verifyResult);
+                
+                const addConfirmBtn = document.createElement('button');
+                addConfirmBtn.innerHTML = '<i class="fas fa-user-plus"></i> 添加共享';
+                addConfirmBtn.disabled = true;
+                addConfirmBtn.style.cssText = 'width: 100%; padding: 12px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: not-allowed;';
+                addSection.appendChild(addConfirmBtn);
+                
+                dialog.appendChild(addSection);
+                
+                // 验证功能
+                let verifiedUser = null;
                 
                 verifyBtn.addEventListener('click', async () => {
                     const username = input.value.trim();
@@ -2161,19 +2226,21 @@ export async function todoPage(request, env) {
                                 '</div>' +
                             '</div>';
                         addConfirmBtn.disabled = false;
+                        addConfirmBtn.style.cssText = 'width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;';
                     } else {
                         verifiedUser = null;
                         verifyResult.innerHTML = '<span style="color: #ff6b6b;"><i class="fas fa-times-circle"></i> 用户不存在</span>';
                         addConfirmBtn.disabled = true;
+                        addConfirmBtn.style.cssText = 'width: 100%; padding: 12px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: not-allowed;';
                     }
                 });
                 
-                // 添加共享按钮
+                // 添加共享
                 addConfirmBtn.addEventListener('click', async () => {
                     if (!verifiedUser) return;
                     
                     addConfirmBtn.disabled = true;
-                    addConfirmBtn.textContent = '添加中...';
+                    addConfirmBtn.innerHTML = '添加中...';
                     
                     try {
                         const response = await fetch('/api/todos/' + todoId + '/share', {
@@ -2187,19 +2254,34 @@ export async function todoPage(request, env) {
                         if (data.success) {
                             showToast('共享成功！');
                             overlay.remove();
-                            openShareDialog(todoId); // 重新打开对话框刷新列表
+                            openShareDialog(todoId);
                         } else {
                             showToast(data.error || '共享失败', 'error');
                             addConfirmBtn.disabled = false;
-                            addConfirmBtn.textContent = '添加共享';
+                            addConfirmBtn.innerHTML = '<i class="fas fa-user-plus"></i> 添加共享';
                         }
                     } catch (e) {
                         showToast('共享失败: ' + e.message, 'error');
                         addConfirmBtn.disabled = false;
-                        addConfirmBtn.textContent = '添加共享';
+                        addConfirmBtn.innerHTML = '<i class="fas fa-user-plus"></i> 添加共享';
                     }
                 });
+            } else {
+                const noPermMsg = document.createElement('div');
+                noPermMsg.style.cssText = 'color: #999; font-size: 13px; text-align: center; padding-top: 10px;';
+                noPermMsg.textContent = '只有创建者可以管理共享';
+                dialog.appendChild(noPermMsg);
             }
+            
+            // 关闭按钮
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '关闭';
+            closeBtn.style.cssText = 'width: 100%; margin-top: 15px; padding: 12px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer;';
+            closeBtn.onclick = () => overlay.remove();
+            dialog.appendChild(closeBtn);
+            
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
         }
         
         // 移除共享
