@@ -478,10 +478,9 @@ export async function todoPage(request, env) {
                 
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <mdui-button id="toggle-multi-select" variant="tonal" icon="check_box">多选</mdui-button>
-                    <mdui-button id="batch-cancel" variant="tonal" icon="close" style="display: none;">取消</mdui-button>
-                    <mdui-button id="batch-complete" variant="filled" icon="check" style="display: none;">完成</mdui-button>
-                    <mdui-button id="batch-delete" variant="filled" icon="delete" style="display: none;">删除</mdui-button>
-                    <span id="selected-count" style="font-size: 14px; color: #666; display: none;">已选 0 项</span>
+                    <mdui-button id="batch-complete" variant="filled" icon="check" style="display: none; transition: all 0.3s ease;">完成</mdui-button>
+                    <mdui-button id="batch-delete" variant="filled" icon="delete" style="display: none; transition: all 0.3s ease;">删除</mdui-button>
+                    <span id="selected-count" style="font-size: 14px; color: #666; display: none; transition: all 0.3s ease;">已选 0 项</span>
                 </div>
             </div>
             
@@ -765,21 +764,20 @@ export async function todoPage(request, env) {
             const toggleBtn = document.getElementById('toggle-multi-select');
             const completeBtn = document.getElementById('batch-complete');
             const deleteBtn = document.getElementById('batch-delete');
-            const cancelBtn = document.getElementById('batch-cancel');
             const countSpan = document.getElementById('selected-count');
             
             if (isMultiSelectMode) {
-                toggleBtn.style.display = 'none';
+                // 多选模式：多选按钮变紫色，显示完成/删除/计数
+                toggleBtn.setAttribute('variant', 'filled');
                 completeBtn.style.display = 'inline-block';
                 deleteBtn.style.display = 'inline-block';
-                cancelBtn.style.display = 'inline-block';
                 countSpan.style.display = 'inline';
                 countSpan.textContent = '已选 ' + selectedTodos.length + ' 项';
             } else {
-                toggleBtn.style.display = 'inline-block';
+                // 普通模式：多选按钮恢复，隐藏完成/删除/计数
+                toggleBtn.setAttribute('variant', 'tonal');
                 completeBtn.style.display = 'none';
                 deleteBtn.style.display = 'none';
-                cancelBtn.style.display = 'none';
                 countSpan.style.display = 'none';
             }
         }
