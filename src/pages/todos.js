@@ -2078,7 +2078,8 @@ export async function todoPage(request, env) {
             try {
                 const userResponse = await fetch('/api/me');
                 const userData = await userResponse.json();
-                if (userData.authenticated && userData.user) {
+                console.log('获取当前用户响应:', userData);
+                if (userData.user && userData.user.login) {
                     currentUserLogin = userData.user.login;
                 }
             } catch (e) {
