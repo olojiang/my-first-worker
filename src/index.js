@@ -1935,7 +1935,7 @@ async function todoPage(request, env) {
                         todos = todos.filter(t => t.id !== todoId);
                     }
                 } catch (e) {
-                    console.error('[批量删除] 失败:', todoId, e);
+                    console.error('[batchDelete] failed:', todoId, e);
                 }
             }
             
@@ -1947,12 +1947,12 @@ async function todoPage(request, env) {
         
         // 显示资源信息
         async function showResourceInfo() {
-            console.log('[资源信息] 开始获取...');
+            console.log('[ResourceInfo] fetching...');
             
             try {
                 const response = await fetch('/api/resources');
                 const data = await response.json();
-                console.log('[资源信息] 返回数据:', data);
+                console.log('[ResourceInfo] data:', data);
                 
                 if (data.success) {
                     // 创建信息弹窗
@@ -1963,24 +1963,23 @@ async function todoPage(request, env) {
                     dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center;';
                     
                     dialog.innerHTML = 
-                        '<h3 style="margin: 0 0 20px 0; color: #333;"><i class="fas fa-server"></i> Cloudflare 资源</h3>' +
+                        '<h3 style="margin: 0 0 20px 0; color: #333;">Cloudflare Resources</h3>' +
                         '<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
                                 '<div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">' + data.kv.count + '</div>' +
-                                '<div style="font-size: 14px; color: #666;">KV 存储条目</div>' +
+                                '<div style="font-size: 14px; color: #666;">KV Items</div>' +
                             '</div>' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
                                 '<div style="font-size: 24px; font-weight: bold; color: #4ade80;">' + data.db.count + '</div>' +
-                                '<div style="font-size: 14px; color: #666;">D1 数据库记录</div>' +
+                                '<div style="font-size: 14px; color: #666;">DB Records</div>' +
                             '</div>' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
                                 '<div style="font-size: 24px; font-weight: bold; color: #54a0ff;">' + data.r2.count + '</div>' +
-                                '<div style="font-size: 14px; color: #666;">R2 存储对象</div>' +
+                                '<div style="font-size: 14px; color: #666;">R2 Objects</div>' +
                             '</div>' +
                         '</div>' +
-                        '<button onclick="this.closest(\'.fixed-overlay\').remove()" style="padding: 10px 30px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">关闭</button>';
+                        '<button onclick="this.parentElement.parentElement.remove()" style="padding: 10px 30px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">Close</button>';
                     
-                    overlay.className = 'fixed-overlay';
                     overlay.appendChild(dialog);
                     document.body.appendChild(overlay);
                     
@@ -1991,11 +1990,11 @@ async function todoPage(request, env) {
                         }
                     });
                 } else {
-                    showToast('获取资源信息失败', 'error');
+                    showToast('Failed to get resource info', 'error');
                 }
             } catch (e) {
-                console.error('[资源信息] 出错:', e);
-                showToast('获取资源信息失败: ' + e.message, 'error');
+                console.error('[ResourceInfo] error:', e);
+                showToast('Failed to get resource info: ' + e.message, 'error');
             }
         }
         
