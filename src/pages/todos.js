@@ -483,8 +483,8 @@ export async function todoPage(request, env) {
             
             <!-- 搜索和标签筛选 -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
-                <mdui-text-field id="search-input" placeholder="搜索待办内容..." style="flex: 1;"></mdui-text-field>
-                <mdui-button onclick="clearFilters()" variant="outlined" icon="close">清除</mdui-button>
+                <mdui-text-field id="search-input" placeholder="搜索待办内容..." style="flex: 1;" oninput="toggleClearButton()"></mdui-text-field>
+                <mdui-button id="clear-btn" onclick="clearFilters()" variant="outlined" icon="close" style="display: none;">清除</mdui-button>
             </div>
             <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
                 <span style="font-size: 14px; color: #666;">筛选标签:</span>
@@ -1203,11 +1203,21 @@ export async function todoPage(request, env) {
             renderTodos();
         }
         
+        // 切换清除按钮显示
+        function toggleClearButton() {
+            const searchInput = document.getElementById('search-input');
+            const clearBtn = document.getElementById('clear-btn');
+            if (searchInput && clearBtn) {
+                clearBtn.style.display = searchInput.value.trim() ? 'inline-block' : 'none';
+            }
+        }
+        
         // 清除所有筛选
         function clearFilters() {
             searchKeyword = '';
             filterTags = [];
             document.getElementById('search-input').value = '';
+            toggleClearButton();
             renderFilterTags();
             renderTodos();
         }
