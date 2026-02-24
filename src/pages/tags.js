@@ -267,6 +267,11 @@ export function tagsPage() {
                 if (data.success) {
                     tags = data.tags || [];
                     renderTags();
+                } else if (response.status === 401) {
+                    showToast('请先登录', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
                 }
             } catch (e) {
                 showToast('加载失败: ' + e.message, 'error');

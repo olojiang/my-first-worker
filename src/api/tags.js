@@ -1,10 +1,20 @@
 import { jsonResponse } from '../utils/response.js'
+import { getSession } from '../auth/session.js';
 
 export async function apiTags(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
-  const KV_KEY = 'tags_list_v2';
+  
+  // 获取当前用户
+  const session = await getSession(env, request);
+  if (!session || !session.data.user) {
+    return jsonResponse({ success: false, error: '未登录' }, 401);
+  }
+  
+  const userId = session.data.user.id;
+  const userLogin = session.data.user.login;
+  const KV_KEY = `tags:${userId}:${userLogin}`;
   
   const TAG_COLORS = [
     '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff',
