@@ -103,9 +103,9 @@ export async function apiTodos(request, env) {
           SELECT t.*, ts.owner_id as shared_by_id, ts.shared_with_login
           FROM todos t
           INNER JOIN todo_shares ts ON t.id = ts.todo_id
-          WHERE ts.shared_with_id = ?
+          WHERE ts.shared_with_id = ? OR ts.shared_with_login = ?
           ORDER BY t.created_at DESC
-        `).bind(currentUser.id).all();
+        `).bind(currentUser.id.toString(), currentUser.login).all();
 
         const sharedTodos = (sharedResult.results || []).map(todo => ({
           ...todo,
