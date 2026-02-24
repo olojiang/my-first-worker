@@ -2073,9 +2073,21 @@ export async function todoPage(request, env) {
             if (!todo) return;
             
             // 检查权限（只有创建者可以管理共享）
-            const currentUserEl = document.getElementById('user-name');
-            const currentUser = currentUserEl ? currentUserEl.textContent : '';
-            const isOwner = todo.user_login === currentUser;
+            // 从 API 返回的 user 信息中获取当前用户
+            let currentUserLogin = '';
+            try {
+                const userResponse = await fetch('/api/user');
+                const userData = await userResponse.json();
+                if (userData.authenticated && userData.user) {
+                    currentUserLogin = userData.user.login;
+                }
+            } catch (e) {
+                console.error('获取当前用户失败:', e);
+            }
+            
+            const isOwner = todo.user_login === currentUserLogin;
+            
+            console.log('共享对话框 - 创建者:', todo.user_login, '当前用户:', currentUserLogin, '是否创建者:', isOwner);
             
             // 获取当前共享列表
             let shares = [];
