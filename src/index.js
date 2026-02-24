@@ -2124,16 +2124,25 @@ async function todoPage(request, env) {
                 const icon = isImage ? 'fa-image' : 'fa-file';
                 const sizeStr = formatFileSize(att.size);
                 
-                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px;">' +
+                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px;" data-att-id="' + att.id + '">' +
                     '<i class="fas ' + icon + '" style="color: #666;"></i>' +
                     '<span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">' + escapeHtml(att.name) + '</span>' +
                     '<span style="color: #999; font-size: 11px;">' + sizeStr + '</span>' +
                     (att.uploading ? '<i class="fas fa-spinner fa-spin" style="color: #999;"></i>' : '') +
-                    '<button onclick="removeAttachment(\'' + att.id + '\')" style="background: none; border: none; color: #ff6b6b; cursor: pointer; padding: 4px;"><i class="fas fa-times"></i></button>' +
+                    '<button class="remove-att-btn" style="background: none; border: none; color: #ff6b6b; cursor: pointer; padding: 4px;"><i class="fas fa-times"></i></button>' +
                 '</div>';
             });
             
             container.innerHTML = html;
+            
+            // 绑定删除按钮事件
+            container.querySelectorAll('.remove-att-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.closest('[data-att-id]').dataset.attId;
+                    removeAttachment(id);
+                });
+            });
         }
         
         // 移除附件
@@ -2167,15 +2176,15 @@ async function todoPage(request, env) {
         function renderTodoAttachments(attachments) {
             if (!attachments || attachments.length === 0) return '';
             
-            let html = '<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;">';
+            let html = '<div class="todo-attachments" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;">';
             
-            attachments.forEach(att => {
+            attachments.forEach((att, index) => {
                 const isImage = att.type && att.type.startsWith('image/');
                 const isText = att.type && (att.type.startsWith('text/') || att.type === 'application/json');
                 const icon = isImage ? 'fa-image' : (isText ? 'fa-file-alt' : 'fa-file');
                 const color = isImage ? '#ff6b6b' : (isText ? '#4ade80' : '#54a0ff');
                 
-                html += '<div onclick="event.stopPropagation(); viewAttachment(' + JSON.stringify(att).replace(/"/g, '&quot;') + ')" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 20px; cursor: pointer; font-size: 12px; border: 1px solid #e0e0e0; transition: all 0.2s;" onmouseover="this.style.background=\'#f0f0f0\'" onmouseout="this.style.background=\'white\'">' +
+                html += '<div class="todo-att-item" data-att-index="' + index + '" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 20px; cursor: pointer; font-size: 12px; border: 1px solid #e0e0e0; transition: all 0.2s;" onmouseover="this.style.background=\'#f0f0f0\'" onmouseout="this.style.background=\'white\'">' +
                     '<i class="fas ' + icon + '" style="color: ' + color + ';"></i>' +
                     '<span style="max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + escapeHtml(att.name) + '</span>' +
                 '</div>';
@@ -2199,7 +2208,7 @@ async function todoPage(request, env) {
             let innerHtml = '<div style="padding: 20px;">';
             innerHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
             innerHtml += '<h3 style="margin: 0; font-size: 16px;">' + escapeHtml(att.name) + '</h3>';
-            innerHtml += '<button onclick="this.closest(\'.fixed-overlay\').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">&times;</button>';
+            innerHtml += '<button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">&times;</button>';
             innerHtml += '</div>';
             
             if (isImage) {
@@ -2551,6 +2560,21 @@ async function todoPage(request, env) {
             });
             
             listEl.innerHTML = html;
+            
+            // 绑定附件点击事件
+            listEl.querySelectorAll('.todo-attachments').forEach((container, index) => {
+                const todoId = filteredTodos[index].id;
+                const todo = todos.find(t => t.id === todoId);
+                if (todo && todo.attachments) {
+                    container.querySelectorAll('.todo-att-item').forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const attIndex = parseInt(item.dataset.attIndex);
+                            viewAttachment(todo.attachments[attIndex]);
+                        });
+                    });
+                }
+            });
         }
         
         // 选中 todo 项（移动端用）
