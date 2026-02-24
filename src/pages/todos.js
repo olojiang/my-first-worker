@@ -839,7 +839,8 @@ export async function todoPage(request, env) {
                     overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease;';
                     
                     const dialog = document.createElement('div');
-                    dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center; transform: translate(-50%, -50%) scale(0.8); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);';
+                    // 初始状态：整体缩小并偏移
+                    dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center; transform: scale(0.5) translate(-20%, -20%); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);';
                     dialog.innerHTML = 
                         '<h3 style="margin: 0 0 20px 0; color: #333;">Cloudflare Resources</h3>' +
                         '<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">' +
@@ -868,27 +869,43 @@ export async function todoPage(request, env) {
                             '• R2: 10GB storage, 10M requests/month<br>' +
                             '• Workers: 100k requests/day' +
                         '</div>' +
-                        '<mdui-button onclick="this.parentElement.parentElement.remove()" variant="filled" style="width: 100%;">Close</mdui-button>';
+                        '<mdui-button onclick="closeResourceDialog(this)" variant="filled" style="width: 100%;">Close</mdui-button>';
                     
                     overlay.appendChild(dialog);
                     document.body.appendChild(overlay);
                     
-                    // 触发动画
+                    // 触发动画 - 从小放大到正常
                     requestAnimationFrame(() => {
                         overlay.style.opacity = '1';
-                        dialog.style.transform = 'translate(0, 0) scale(1)';
+                        dialog.style.transform = 'scale(1) translate(0, 0)';
                         dialog.style.opacity = '1';
                     });
+                    
+                    // 关闭函数
+                    window.closeResourceDialog = function(btn) {
+                        const dialog = btn.closest('div').parentElement;
+                        const overlay = dialog.parentElement;
+                        // 反向动画 - 缩小并偏移
+                        overlay.style.opacity = '0';
+                        dialog.style.transform = 'scale(0.5) translate(-20%, -20%)';
+                        dialog.style.opacity = '0';
+                        setTimeout(() => {
+                            document.body.removeChild(overlay);
+                            delete window.closeResourceDialog;
+                        }, 400);
+                    };
                     
                     // 点击遮罩关闭
                     overlay.addEventListener('click', (e) => {
                         if (e.target === overlay) {
+                            // 反向动画
                             overlay.style.opacity = '0';
-                            dialog.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                            dialog.style.transform = 'scale(0.5) translate(-20%, -20%)';
                             dialog.style.opacity = '0';
                             setTimeout(() => {
                                 document.body.removeChild(overlay);
-                            }, 300);
+                                delete window.closeResourceDialog;
+                            }, 400);
                         }
                     });
                 } else {
