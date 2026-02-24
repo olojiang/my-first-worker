@@ -141,6 +141,10 @@ export default {
         return apiTags(request, env);
       case '/api/resources':
         return apiResources(request, env);
+      case '/api/upload':
+        return apiUpload(request, env);
+      case '/api/attachments':
+        return apiAttachments(request, env);
       default:
         if (path.startsWith('/api/todos/') || path === '/api/todos/migrate') {
           return apiTodos(request, env);
@@ -1657,6 +1661,17 @@ async function todoPage(request, env) {
                 <span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span>
                 <span style="font-size: 12px; color: #999;">加载中...</span>
             </div>
+            <div class="attachments-section" id="attachments-section" style="margin-top: 15px; display: none;">
+                <div style="font-size: 14px; color: #666; margin-bottom: 8px;"><i class="fas fa-paperclip"></i> 附件 (<span id="attachment-count">0</span>):</div>
+                <div id="attachment-list" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
+                <input type="file" id="file-input" style="display: none;" multiple accept="image/*,.txt,.json,.md,.csv,.js,.html,.css">
+                <button onclick="document.getElementById('file-input').click()" style="padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-upload"></i> 添加附件
+                </button>
+                <span style="font-size: 12px; color: #999;">支持图片、文本文件 (最大 5MB)</span>
+            </div>
         </div>
         
         <div class="todo-list" id="todo-list">
@@ -1677,6 +1692,7 @@ async function todoPage(request, env) {
         let searchKeyword = ''; // 搜索关键词
         let selectedTodos = []; // 多选选中的 todo ID 列表
         let isMultiSelectMode = false; // 是否处于多选模式
+        let currentAttachments = []; // 当前待添加的附件列表
         
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', () => {
@@ -1817,6 +1833,19 @@ async function todoPage(request, env) {
                 }
             } catch (e) {
                 console.error('[初始化] 绑定多选按钮出错:', e);
+            }
+            
+            // 绑定文件上传
+            try {
+                const fileInput = document.getElementById('file-input');
+                if (fileInput) {
+                    fileInput.addEventListener('change', handleFileSelect);
+                    console.log('[初始化] 文件上传事件绑定成功');
+                } else {
+                    console.error('[初始化] 文件输入框不存在');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定文件上传出错:', e);
             }
             
             console.log('[初始化] DOMContentLoaded 处理完成');
@@ -2008,6 +2037,206 @@ async function todoPage(request, env) {
                 console.error('[ResourceInfo] error:', e);
                 showToast('Failed to get resource info: ' + e.message, 'error');
             }
+        }
+        
+        // 处理文件选择
+        async function handleFileSelect(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+            
+            for (const file of files) {
+                if (file.size > MAX_SIZE) {
+                    showToast('File too large: ' + file.name + ' (max 5MB)', 'error');
+                    continue;
+                }
+                
+                // 添加到当前附件列表（先显示上传中）
+                const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const attachment = {
+                    id: tempId,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    uploading: true,
+                    file: file
+                };
+                currentAttachments.push(attachment);
+                renderAttachments();
+                
+                // 上传到服务器
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    showToast('Uploading ' + file.name + '...');
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        // 更新附件信息
+                        attachment.uploading = false;
+                        attachment.key = data.attachment.key;
+                        attachment.url = data.attachment.url;
+                        showToast('Uploaded: ' + file.name);
+                    } else {
+                        showToast('Upload failed: ' + file.name, 'error');
+                        currentAttachments = currentAttachments.filter(a => a.id !== tempId);
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    showToast('Upload error: ' + file.name, 'error');
+                    currentAttachments = currentAttachments.filter(a => a.id !== tempId);
+                }
+                
+                renderAttachments();
+            }
+            
+            // 清空 input 以便重复选择相同文件
+            e.target.value = '';
+        }
+        
+        // 渲染附件列表
+        function renderAttachments() {
+            const container = document.getElementById('attachment-list');
+            const section = document.getElementById('attachments-section');
+            const countSpan = document.getElementById('attachment-count');
+            
+            if (!container) return;
+            
+            countSpan.textContent = currentAttachments.length;
+            
+            if (currentAttachments.length === 0) {
+                section.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+            
+            section.style.display = 'block';
+            
+            let html = '';
+            currentAttachments.forEach(att => {
+                const isImage = att.type && att.type.startsWith('image/');
+                const icon = isImage ? 'fa-image' : 'fa-file';
+                const sizeStr = formatFileSize(att.size);
+                
+                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px;">' +
+                    '<i class="fas ' + icon + '" style="color: #666;"></i>' +
+                    '<span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">' + escapeHtml(att.name) + '</span>' +
+                    '<span style="color: #999; font-size: 11px;">' + sizeStr + '</span>' +
+                    (att.uploading ? '<i class="fas fa-spinner fa-spin" style="color: #999;"></i>' : '') +
+                    '<button onclick="removeAttachment(\'' + att.id + '\')" style="background: none; border: none; color: #ff6b6b; cursor: pointer; padding: 4px;"><i class="fas fa-times"></i></button>' +
+                '</div>';
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 移除附件
+        async function removeAttachment(id) {
+            const att = currentAttachments.find(a => a.id === id);
+            if (att && att.key && !att.uploading) {
+                // 从服务器删除
+                try {
+                    await fetch('/api/attachments/' + encodeURIComponent(att.key), {
+                        method: 'DELETE'
+                    });
+                } catch (e) {
+                    console.error('Delete attachment error:', e);
+                }
+            }
+            
+            currentAttachments = currentAttachments.filter(a => a.id !== id);
+            renderAttachments();
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        // 渲染 todo 附件
+        function renderTodoAttachments(attachments) {
+            if (!attachments || attachments.length === 0) return '';
+            
+            let html = '<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;">';
+            
+            attachments.forEach(att => {
+                const isImage = att.type && att.type.startsWith('image/');
+                const isText = att.type && (att.type.startsWith('text/') || att.type === 'application/json');
+                const icon = isImage ? 'fa-image' : (isText ? 'fa-file-alt' : 'fa-file');
+                const color = isImage ? '#ff6b6b' : (isText ? '#4ade80' : '#54a0ff');
+                
+                html += '<div onclick="event.stopPropagation(); viewAttachment(' + JSON.stringify(att).replace(/"/g, '&quot;') + ')" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 20px; cursor: pointer; font-size: 12px; border: 1px solid #e0e0e0; transition: all 0.2s;" onmouseover="this.style.background=\'#f0f0f0\'" onmouseout="this.style.background=\'white\'">' +
+                    '<i class="fas ' + icon + '" style="color: ' + color + ';"></i>' +
+                    '<span style="max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + escapeHtml(att.name) + '</span>' +
+                '</div>';
+            });
+            
+            html += '</div>';
+            return html;
+        }
+        
+        // 查看附件
+        function viewAttachment(att) {
+            const isImage = att.type && att.type.startsWith('image/');
+            const isText = att.type && (att.type.startsWith('text/') || att.type === 'application/json');
+            
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+            
+            const content = document.createElement('div');
+            content.style.cssText = 'background: white; border-radius: 16px; max-width: 90%; max-height: 90%; overflow: auto; position: relative;';
+            
+            let innerHtml = '<div style="padding: 20px;">';
+            innerHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
+            innerHtml += '<h3 style="margin: 0; font-size: 16px;">' + escapeHtml(att.name) + '</h3>';
+            innerHtml += '<button onclick="this.closest(\'.fixed-overlay\').remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">&times;</button>';
+            innerHtml += '</div>';
+            
+            if (isImage) {
+                innerHtml += '<img src="' + att.url + '" style="max-width: 100%; max-height: 70vh; border-radius: 8px; display: block;">';
+            } else if (isText) {
+                innerHtml += '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; max-height: 60vh; overflow: auto; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all;">Loading...</div>';
+            } else {
+                innerHtml += '<div style="text-align: center; padding: 40px;"><i class="fas fa-file" style="font-size: 48px; color: #ccc;"></i><p style="margin-top: 15px; color: #666;">Preview not available</p><a href="' + att.url + '" download style="display: inline-block; margin-top: 10px; padding: 10px 20px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; text-decoration: none; border-radius: 8px;">Download</a></div>';
+            }
+            
+            innerHtml += '</div>';
+            content.innerHTML = innerHtml;
+            
+            overlay.className = 'fixed-overlay';
+            overlay.appendChild(content);
+            document.body.appendChild(overlay);
+            
+            // 加载文本内容
+            if (isText) {
+                fetch(att.url)
+                    .then(r => r.text())
+                    .then(text => {
+                        const pre = content.querySelector('div > div > div');
+                        if (pre) pre.textContent = text;
+                    })
+                    .catch(e => {
+                        const pre = content.querySelector('div > div > div');
+                        if (pre) pre.textContent = 'Error loading file: ' + e.message;
+                    });
+            }
+            
+            // 点击遮罩关闭
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
         }
         
         let currentFilter = 'pending'; // 默认筛选未完成的
@@ -2289,6 +2518,12 @@ async function todoPage(request, env) {
                     tagsHtml += '</div>';
                 }
                 
+                // 渲染附件
+                let attachmentsHtml = '';
+                if (todo.attachments && todo.attachments.length > 0) {
+                    attachmentsHtml = renderTodoAttachments(todo.attachments);
+                }
+                
                 const itemClass = todo.done ? 'todo-item completed' : 'todo-item';
                 const isSelected = selectedTodos.includes(todo.id);
                 
@@ -2309,6 +2544,7 @@ async function todoPage(request, env) {
                     '<div class="todo-content">' +
                         '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
                         tagsHtml +
+                        attachmentsHtml +
                         '<div class="todo-time">' + timeStr + '</div>' +
                     '</div>' +
                 '</div>';
@@ -2566,12 +2802,24 @@ async function todoPage(request, env) {
             btn.textContent = '添加中...';
             
             try {
+                // 准备附件数据（排除上传中的和临时文件）
+                const attachments = currentAttachments
+                    .filter(att => !att.uploading && att.key)
+                    .map(att => ({
+                        key: att.key,
+                        name: att.name,
+                        size: att.size,
+                        type: att.type,
+                        url: att.url
+                    }));
+                
                 const response = await fetch('/api/todos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         text: text,
-                        tags: selectedTags
+                        tags: selectedTags,
+                        attachments: attachments
                     })
                 });
                 
@@ -2580,6 +2828,8 @@ async function todoPage(request, env) {
                 if (data.success) {
                     input.value = '';
                     selectedTags = [];
+                    currentAttachments = []; // 清空附件列表
+                    renderAttachments();
                     renderTagSelect();
                     todos.unshift(data.todo);
                     renderTodos();
@@ -3142,6 +3392,13 @@ async function apiTodos(request, env) {
       } catch (alterErr) {
         // 列已存在或表刚创建，忽略错误
       }
+      
+      // 尝试添加 attachments 列（存储附件信息 JSON）
+      try {
+        await env.DB.prepare('ALTER TABLE todos ADD COLUMN attachments TEXT').run();
+      } catch (alterErr) {
+        // 列已存在，忽略错误
+      }
     } catch (e) {
       // 忽略错误
     }
@@ -3162,7 +3419,8 @@ async function apiTodos(request, env) {
       }
       const todos = (result.results || []).map(todo => ({
         ...todo,
-        tags: todo.tags ? JSON.parse(todo.tags) : []
+        tags: todo.tags ? JSON.parse(todo.tags) : [],
+        attachments: todo.attachments ? JSON.parse(todo.attachments) : []
       }));
       return jsonResponse({
         success: true,
@@ -3176,6 +3434,7 @@ async function apiTodos(request, env) {
       const body = await request.json();
       const text = body.text?.trim();
       const tags = body.tags || [];
+      const attachments = body.attachments || [];
       
       if (!text) {
         return jsonResponse({ success: false, error: '待办事项不能为空' }, 400);
@@ -3186,8 +3445,8 @@ async function apiTodos(request, env) {
       const userLogin = currentUser ? currentUser.login : null;
       
       // 插入数据 - 包含 user_id 和 user_login
-      await env.DB.prepare('INSERT INTO todos (text, tags, user_id, user_login) VALUES (?, ?, ?, ?)')
-        .bind(text, JSON.stringify(tags), userId, userLogin)
+      await env.DB.prepare('INSERT INTO todos (text, tags, attachments, user_id, user_login) VALUES (?, ?, ?, ?, ?)')
+        .bind(text, JSON.stringify(tags), JSON.stringify(attachments), userId, userLogin)
         .run();
       
       // 获取刚插入的数据
@@ -3195,6 +3454,7 @@ async function apiTodos(request, env) {
       const todo = result.results?.[0];
       if (todo) {
         todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
+        todo.attachments = todo.attachments ? JSON.parse(todo.attachments) : [];
       }
       
       return jsonResponse({ success: true, todo });
@@ -3241,6 +3501,7 @@ async function apiTodos(request, env) {
       const todo = result.results?.[0];
       if (todo) {
         todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
+        todo.attachments = todo.attachments ? JSON.parse(todo.attachments) : [];
       }
       
       return jsonResponse({ success: true, todo });
@@ -3499,8 +3760,123 @@ async function apiTags(request, env) {
   } catch (e) {
     return jsonResponse({ 
       success: false,
-      error: '操作失败', 
+      error: 'Tags operation failed', 
       message: e.message 
     }, 500);
   }
+}
+
+// 文件上传 API - 上传到 R2
+async function apiUpload(request, env) {
+  if (request.method !== 'POST') {
+    return jsonResponse({ success: false, error: 'Method not allowed' }, 405);
+  }
+  
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const todoId = formData.get('todoId');
+    
+    if (!file) {
+      return jsonResponse({ success: false, error: 'No file provided' }, 400);
+    }
+    
+    // 检查文件大小 (5MB = 5 * 1024 * 1024 bytes)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return jsonResponse({ success: false, error: 'File too large (max 5MB)' }, 400);
+    }
+    
+    // 生成唯一文件名
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 10);
+    const fileExt = file.name.split('.').pop();
+    const key = `attachments/${todoId || 'temp'}/${timestamp}-${randomStr}.${fileExt}`;
+    
+    // 上传到 R2
+    await env.STORAGE.put(key, file.stream(), {
+      httpMetadata: {
+        contentType: file.type,
+        contentDisposition: `inline; filename="${file.name}"`
+      },
+      customMetadata: {
+        originalName: file.name,
+        size: file.size.toString(),
+        todoId: todoId || '',
+        uploadedAt: new Date().toISOString()
+      }
+    });
+    
+    return jsonResponse({
+      success: true,
+      attachment: {
+        key: key,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: `/api/attachments/${encodeURIComponent(key)}`
+      }
+    });
+    
+  } catch (e) {
+    console.error('Upload error:', e);
+    return jsonResponse({ 
+      success: false, 
+      error: 'Upload failed', 
+      message: e.message 
+    }, 500);
+  }
+}
+
+// 附件访问 API - 从 R2 获取文件
+async function apiAttachments(request, env) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  
+  // GET /api/attachments/:key - 获取文件
+  if (request.method === 'GET' && path.startsWith('/api/attachments/')) {
+    const key = decodeURIComponent(path.replace('/api/attachments/', ''));
+    
+    try {
+      const object = await env.STORAGE.get(key);
+      
+      if (!object) {
+        return jsonResponse({ success: false, error: 'File not found' }, 404);
+      }
+      
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set('etag', object.httpEtag);
+      headers.set('Access-Control-Allow-Origin', '*');
+      
+      return new Response(object.body, { headers });
+      
+    } catch (e) {
+      console.error('Get attachment error:', e);
+      return jsonResponse({ 
+        success: false, 
+        error: 'Failed to get file', 
+        message: e.message 
+      }, 500);
+    }
+  }
+  
+  // DELETE /api/attachments/:key - 删除文件
+  if (request.method === 'DELETE' && path.startsWith('/api/attachments/')) {
+    const key = decodeURIComponent(path.replace('/api/attachments/', ''));
+    
+    try {
+      await env.STORAGE.delete(key);
+      return jsonResponse({ success: true });
+    } catch (e) {
+      console.error('Delete attachment error:', e);
+      return jsonResponse({ 
+        success: false, 
+        error: 'Failed to delete file', 
+        message: e.message 
+      }, 500);
+    }
+  }
+  
+  return jsonResponse({ error: 'Not Found' }, 404);
 }
