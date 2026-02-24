@@ -883,14 +883,24 @@ export async function todoPage(request, env) {
                     
                     // 关闭函数
                     window.closeResourceDialog = function(btn) {
-                        const overlay = btn.closest('div[style*="position: fixed"]').parentElement;
+                        // 找到按钮所在的 dialog，然后找到 overlay
+                        let el = btn;
+                        while (el && el.parentElement) {
+                            if (el.style.position === 'fixed') {
+                                break;
+                            }
+                            el = el.parentElement;
+                        }
+                        const overlay = el;
                         const dialog = overlay.querySelector('div');
+                        
                         // 反向动画 - 缩小并偏移
                         overlay.style.opacity = '0';
                         dialog.style.transform = 'scale(0.5) translate(-20%, -20%)';
                         dialog.style.opacity = '0';
+                        
                         setTimeout(() => {
-                            if (overlay.parentNode) {
+                            if (overlay.parentNode === document.body) {
                                 document.body.removeChild(overlay);
                             }
                             delete window.closeResourceDialog;
