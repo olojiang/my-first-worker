@@ -1591,12 +1591,26 @@ export async function todoPage(request, env) {
                     multiSelectHtml = '<div class="multi-select-checkbox" onclick="event.stopPropagation(); toggleTodoSelection(' + todo.id + ')" style="float: left; margin-right: 10px; width: 20px; height: 20px; border: 2px solid #ff6b6b; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: ' + (isSelected ? 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)' : 'white') + ';">' + (isSelected ? '<i class="fas fa-check" style="color: white; font-size: 12px;"></i>' : '') + '</div>';
                 }
                 
+                // 创建者和共享信息
+                let ownerHtml = '';
+                if (todo.user_login) {
+                    ownerHtml += '<div style="margin-top: 8px; font-size: 12px; color: #999; display: flex; align-items: center; gap: 8px;">';
+                    ownerHtml += '<span>创建者: ' + escapeHtml(todo.user_login) + '</span>';
+                    
+                    // 如果是共享的 todo，显示共享信息
+                    if (todo.isShared) {
+                        ownerHtml += '<span style="color: #f59e0b;"><i class="fas fa-share-alt"></i> 共享项目</span>';
+                    }
+                    
+                    ownerHtml += '</div>';
+                }
+                
                 html += '<div class="' + itemClass + (isSelected ? ' selected' : '') + '" data-id="' + todo.id + '" onclick="' + (isMultiSelectMode ? 'toggleTodoSelection(' + todo.id + ')' : 'selectTodo(this)') + '">' +
                     multiSelectHtml +
                     '<div class="todo-actions">' +
                         '<mdui-button-icon class="edit-btn" onclick="event.stopPropagation(); editTodo(' + todo.id + ')" title="编辑" icon="edit" style="color: #3b82f6;"></mdui-button-icon>' +
                         '<mdui-button-icon class="copy-btn" onclick="event.stopPropagation(); copyTodoText(' + todo.id + ')" title="复制内容" icon="content_copy" style="color: #4ade80;"></mdui-button-icon>' +
-                        '<mdui-button-icon class="share-btn" onclick="event.stopPropagation(); shareTodo(' + todo.id + ')" title="共享" icon="share" style="color: #f59e0b;"></mdui-button-icon>' +
+                        '<mdui-button-icon class="share-btn" onclick="event.stopPropagation(); openShareDialog(' + todo.id + ')" title="共享" icon="share" style="color: #f59e0b;"></mdui-button-icon>' +
                         '<mdui-button-icon class="delete-btn" onclick="event.stopPropagation(); deleteTodo(' + todo.id + ')" title="删除" icon="delete" style="color: #ff6b6b;"></mdui-button-icon>' +
                     '</div>' +
                     (!isMultiSelectMode ? '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' : '') +
@@ -1604,6 +1618,7 @@ export async function todoPage(request, env) {
                         '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
                         tagsHtml +
                         attachmentsHtml +
+                        ownerHtml +
                         '<div class="todo-time">' + timeStr + '</div>' +
                     '</div>' +
                 '</div>';
@@ -2032,30 +2047,190 @@ export async function todoPage(request, env) {
             }
         }
         
-        // 共享待办
-        async function shareTodo(id) {
-            const username = prompt('请输入要共享给的 GitHub 用户名：');
-            if (!username || !username.trim()) {
+        // 验证 GitHub 用户名是否存在
+        async function verifyGitHubUser(username) {
+            try {
+                const response = await fetch('https://api.github.com/users/' + encodeURIComponent(username));
+                if (response.status === 200) {
+                    return await response.json();
+                }
+                return null;
+            } catch (e) {
+                console.error('验证 GitHub 用户失败:', e);
+                return null;
+            }
+        }
+        
+        // 打开共享对话框
+        async function openShareDialog(todoId) {
+            const todo = todos.find(t => t.id === todoId);
+            if (!todo) return;
+            
+            // 检查权限（只有创建者可以管理共享）
+            const currentUserEl = document.getElementById('user-name');
+            const currentUser = currentUserEl ? currentUserEl.textContent : '';
+            const isOwner = todo.user_login === currentUser;
+            
+            // 获取当前共享列表
+            let shares = [];
+            try {
+                const response = await fetch('/api/todos/' + todoId + '/shares');
+                const data = await response.json();
+                if (data.success) {
+                    shares = data.shares || [];
+                }
+            } catch (e) {
+                console.error('获取共享列表失败:', e);
+            }
+            
+            // 创建对话框
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+            
+            const dialog = document.createElement('div');
+            dialog.style.cssText = 'background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 450px; max-height: 80vh; overflow-y: auto;';
+            
+            dialog.innerHTML = 
+                '<h3 style="margin: 0 0 20px 0; color: #333; font-size: 18px;"><i class="fas fa-share-alt" style="color: #f59e0b; margin-right: 8px;"></i>共享管理</h3>' +
+                '<div style="margin-bottom: 20px;">' +
+                    '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">创建者</div>' +
+                    '<div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px;">' +
+                        '<img src="https://github.com/' + escapeHtml(todo.user_login || '') + '.png?size=40" style="width: 32px; height: 32px; border-radius: 50%;" onerror="this.src=\'https://github.com/ghost.png?size=40\'">' +
+                        '<span style="font-weight: 500;">' + escapeHtml(todo.user_login || '未知') + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="share-users-list" style="margin-bottom: 20px;">' +
+                    '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">已共享给</div>' +
+                    '<div id="shares-container" style="display: flex; flex-direction: column; gap: 8px;">' +
+                        (shares.length > 0 ? shares.map(s => 
+                            '<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 8px;">' +
+                                '<div style="display: flex; align-items: center; gap: 10px;">' +
+                                    '<img src="https://github.com/' + escapeHtml(s.shared_with_login || s.shared_with_id) + '.png?size=40" style="width: 32px; height: 32px; border-radius: 50%;" onerror="this.src=\'https://github.com/ghost.png?size=40\'">' +
+                                    '<span>' + escapeHtml(s.shared_with_login || s.shared_with_id) + '</span>' +
+                                '</div>' +
+                                (isOwner ? '<mdui-button-icon icon="delete" style="color: #ff6b6b;" onclick="removeShare(' + todoId + ', \'' + escapeHtml(s.shared_with_id) + '\')"></mdui-button-icon>' : '') +
+                            '</div>'
+                        ).join('') : '<div style="color: #999; font-size: 14px; padding: 10px;">暂无共享</div>') +
+                    '</div>' +
+                '</div>' +
+                (isOwner ? 
+                    '<div style="border-top: 1px solid #eee; padding-top: 20px;">' +
+                        '<div style="font-size: 14px; color: #666; margin-bottom: 10px;">添加共享</div>' +
+                        '<div style="display: flex; gap: 10px; margin-bottom: 10px;">' +
+                            '<mdui-text-field id="new-share-input" placeholder="输入 GitHub 用户名" style="flex: 1;"></mdui-text-field>' +
+                            '<mdui-button id="verify-user-btn" variant="tonal" icon="search">验证</mdui-button>' +
+                        '</div>' +
+                        '<div id="user-verify-result" style="margin-bottom: 10px;"></div>' +
+                        '<mdui-button id="add-share-confirm-btn" variant="filled" icon="person_add" disabled style="width: 100%;">添加共享</mdui-button>' +
+                    '</div>' : 
+                    '<div style="color: #999; font-size: 13px; text-align: center; padding-top: 10px;">只有创建者可以管理共享</div>') +
+                '<mdui-button onclick="this.closest(\'.share-dialog-overlay\').remove()" variant="text" style="width: 100%; margin-top: 15px;">关闭</mdui-button>';
+            
+            overlay.className = 'share-dialog-overlay';
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            
+            if (isOwner) {
+                let verifiedUser = null;
+                
+                // 验证用户按钮
+                const verifyBtn = dialog.querySelector('#verify-user-btn');
+                const verifyResult = dialog.querySelector('#user-verify-result');
+                const addConfirmBtn = dialog.querySelector('#add-share-confirm-btn');
+                const input = dialog.querySelector('#new-share-input');
+                
+                verifyBtn.addEventListener('click', async () => {
+                    const username = input.value.trim();
+                    if (!username) {
+                        verifyResult.innerHTML = '<span style="color: #ff6b6b;">请输入用户名</span>';
+                        return;
+                    }
+                    
+                    verifyResult.innerHTML = '<span style="color: #666;">验证中...</span>';
+                    const user = await verifyGitHubUser(username);
+                    
+                    if (user) {
+                        verifiedUser = user;
+                        verifyResult.innerHTML = 
+                            '<div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #e8f5e9; border-radius: 8px;">' +
+                                '<img src="' + user.avatar_url + '" style="width: 40px; height: 40px; border-radius: 50%;">' +
+                                '<div>' +
+                                    '<div style="font-weight: 500;">' + escapeHtml(user.login) + '</div>' +
+                                    '<div style="font-size: 12px; color: #4caf50;"><i class="fas fa-check-circle"></i> 用户存在</div>' +
+                                '</div>' +
+                            '</div>';
+                        addConfirmBtn.disabled = false;
+                    } else {
+                        verifiedUser = null;
+                        verifyResult.innerHTML = '<span style="color: #ff6b6b;"><i class="fas fa-times-circle"></i> 用户不存在</span>';
+                        addConfirmBtn.disabled = true;
+                    }
+                });
+                
+                // 添加共享按钮
+                addConfirmBtn.addEventListener('click', async () => {
+                    if (!verifiedUser) return;
+                    
+                    addConfirmBtn.disabled = true;
+                    addConfirmBtn.textContent = '添加中...';
+                    
+                    try {
+                        const response = await fetch('/api/todos/' + todoId + '/share', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ shared_with_login: verifiedUser.login })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            showToast('共享成功！');
+                            overlay.remove();
+                            openShareDialog(todoId); // 重新打开对话框刷新列表
+                        } else {
+                            showToast(data.error || '共享失败', 'error');
+                            addConfirmBtn.disabled = false;
+                            addConfirmBtn.textContent = '添加共享';
+                        }
+                    } catch (e) {
+                        showToast('共享失败: ' + e.message, 'error');
+                        addConfirmBtn.disabled = false;
+                        addConfirmBtn.textContent = '添加共享';
+                    }
+                });
+            }
+        }
+        
+        // 移除共享
+        window.removeShare = async function(todoId, userId) {
+            if (!confirm('确定要取消对该用户的共享吗？')) {
                 return;
             }
             
             try {
-                const response = await fetch('/api/todos/' + id + '/share', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ shared_with_login: username.trim() })
+                const response = await fetch('/api/todos/' + todoId + '/share/' + encodeURIComponent(userId), {
+                    method: 'DELETE'
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    showToast('共享成功！');
+                    showToast('已取消共享');
+                    // 刷新对话框
+                    const overlay = document.querySelector('.share-dialog-overlay');
+                    if (overlay) overlay.remove();
+                    openShareDialog(todoId);
                 } else {
-                    showToast(data.error || '共享失败', 'error');
+                    showToast(data.error || '取消共享失败', 'error');
                 }
             } catch (e) {
-                showToast('共享失败: ' + e.message, 'error');
+                showToast('取消共享失败: ' + e.message, 'error');
             }
+        }
+        
+        // 旧的共享函数（保留兼容）
+        async function shareTodo(id) {
+            openShareDialog(id);
         }
     </script>
 </body>
