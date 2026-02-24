@@ -883,14 +883,16 @@ export async function todoPage(request, env) {
                     
                     // 关闭函数
                     window.closeResourceDialog = function(btn) {
-                        const dialog = btn.closest('div').parentElement;
-                        const overlay = dialog.parentElement;
+                        const overlay = btn.closest('div[style*="position: fixed"]').parentElement;
+                        const dialog = overlay.querySelector('div');
                         // 反向动画 - 缩小并偏移
                         overlay.style.opacity = '0';
                         dialog.style.transform = 'scale(0.5) translate(-20%, -20%)';
                         dialog.style.opacity = '0';
                         setTimeout(() => {
-                            document.body.removeChild(overlay);
+                            if (overlay.parentNode) {
+                                document.body.removeChild(overlay);
+                            }
                             delete window.closeResourceDialog;
                         }, 400);
                     };
