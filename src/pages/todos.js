@@ -532,6 +532,11 @@ export async function todoPage(request, env) {
                 <mdui-button onclick="document.getElementById('file-input').click()" variant="outlined" icon="upload">添加附件</mdui-button>
                 <span style="font-size: 12px; color: #999;">支持图片、文本文件 (最大 5MB)</span>
             </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center;">
+                <mdui-text-field id="share-input" placeholder="输入GitHub用户名共享（可选）" style="flex: 1;"></mdui-text-field>
+                <mdui-button id="add-share-btn" variant="tonal" icon="person_add" style="flex-shrink: 0;">添加共享</mdui-button>
+            </div>
+            <div id="share-list" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
         </div>
         
         <div class="todo-list" id="todo-list">
@@ -553,6 +558,58 @@ export async function todoPage(request, env) {
         let selectedTodos = []; // 多选选中的 todo ID 列表
         let isMultiSelectMode = false; // 是否处于多选模式
         let currentAttachments = []; // 当前待添加的附件列表
+        let shareWithUsers = []; // 待共享的用户列表
+        
+        // 渲染共享用户列表
+        function renderShareList() {
+            const shareListEl = document.getElementById('share-list');
+            if (!shareListEl) return;
+            
+            if (shareWithUsers.length === 0) {
+                shareListEl.innerHTML = '';
+                return;
+            }
+            
+            shareListEl.innerHTML = shareWithUsers.map((user, index) => `
+                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #e3f2fd; border-radius: 16px; font-size: 13px; color: #1976d2;">
+                    <i class="fas fa-user" style="font-size: 11px;"></i>
+                    ${escapeHtml(user)}
+                    <i class="fas fa-times" style="cursor: pointer; margin-left: 4px;" onclick="removeShareUser(${index})"></i>
+                </span>
+            `).join('');
+        }
+        
+        // 添加共享用户
+        function addShareUser() {
+            const input = document.getElementById('share-input');
+            const username = input?.value?.trim();
+            
+            if (!username) {
+                showToast('请输入GitHub用户名', 'error');
+                return;
+            }
+            
+            if (shareWithUsers.includes(username)) {
+                showToast('该用户已添加', 'error');
+                return;
+            }
+            
+            shareWithUsers.push(username);
+            input.value = '';
+            renderShareList();
+        }
+        
+        // 移除共享用户
+        window.removeShareUser = function(index) {
+            shareWithUsers.splice(index, 1);
+            renderShareList();
+        }
+        
+        // 清空共享用户列表
+        function clearShareUsers() {
+            shareWithUsers = [];
+            renderShareList();
+        }
         
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', () => {
@@ -617,6 +674,33 @@ export async function todoPage(request, env) {
                 }
             } catch (e) {
                 console.error('[初始化] 绑定AI优化按钮出错:', e);
+            }
+            
+            // 绑定添加共享按钮
+            try {
+                const addShareBtn = document.getElementById('add-share-btn');
+                if (addShareBtn) {
+                    addShareBtn.addEventListener('click', addShareUser);
+                    console.log('[初始化] 添加共享按钮事件绑定成功');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定添加共享按钮出错:', e);
+            }
+            
+            // 共享输入框回车添加
+            try {
+                const shareInput = document.getElementById('share-input');
+                if (shareInput) {
+                    shareInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addShareUser();
+                        }
+                    });
+                    console.log('[初始化] 共享输入框事件绑定成功');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定共享输入框出错:', e);
             }
             
             // Ctrl+Enter 添加
@@ -1512,6 +1596,7 @@ export async function todoPage(request, env) {
                     '<div class="todo-actions">' +
                         '<mdui-button-icon class="edit-btn" onclick="event.stopPropagation(); editTodo(' + todo.id + ')" title="编辑" icon="edit" style="color: #3b82f6;"></mdui-button-icon>' +
                         '<mdui-button-icon class="copy-btn" onclick="event.stopPropagation(); copyTodoText(' + todo.id + ')" title="复制内容" icon="content_copy" style="color: #4ade80;"></mdui-button-icon>' +
+                        '<mdui-button-icon class="share-btn" onclick="event.stopPropagation(); shareTodo(' + todo.id + ')" title="共享" icon="share" style="color: #f59e0b;"></mdui-button-icon>' +
                         '<mdui-button-icon class="delete-btn" onclick="event.stopPropagation(); deleteTodo(' + todo.id + ')" title="删除" icon="delete" style="color: #ff6b6b;"></mdui-button-icon>' +
                     '</div>' +
                     (!isMultiSelectMode ? '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' : '') +
@@ -1815,15 +1900,34 @@ export async function todoPage(request, env) {
                 const data = await response.json();
                 
                 if (data.success) {
+                    // 如果有共享用户，逐个共享
+                    if (shareWithUsers.length > 0) {
+                        for (const username of shareWithUsers) {
+                            try {
+                                await fetch('/api/todos/' + data.todo.id + '/share', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ shared_with_login: username })
+                                });
+                            } catch (shareErr) {
+                                console.error('共享失败:', username, shareErr);
+                            }
+                        }
+                        showToast('添加成功！已共享给 ' + shareWithUsers.length + ' 位用户');
+                    } else {
+                        showToast('添加成功！');
+                    }
+                    
                     input.value = '';
                     selectedTags = [];
                     currentAttachments = []; // 清空附件列表
+                    shareWithUsers = []; // 清空共享用户列表
+                    clearShareUsers();
                     renderAttachments();
                     renderTagSelect();
                     todos.unshift(data.todo);
                     renderTodos();
                     updateStats();
-                    showToast('添加成功！');
                 } else {
                     showToast(data.error || '添加失败', 'error');
                 }
@@ -1925,6 +2029,32 @@ export async function todoPage(request, env) {
                 showToast('导出成功！');
             } catch (e) {
                 showToast('导出失败: ' + e.message, 'error');
+            }
+        }
+        
+        // 共享待办
+        async function shareTodo(id) {
+            const username = prompt('请输入要共享给的 GitHub 用户名：');
+            if (!username || !username.trim()) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/todos/' + id + '/share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shared_with_login: username.trim() })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('共享成功！');
+                } else {
+                    showToast(data.error || '共享失败', 'error');
+                }
+            } catch (e) {
+                showToast('共享失败: ' + e.message, 'error');
             }
         }
     </script>
