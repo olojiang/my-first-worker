@@ -2050,7 +2050,8 @@ export async function todoPage(request, env) {
         // 验证 GitHub 用户名是否存在
         async function verifyGitHubUser(username) {
             try {
-                const response = await fetch('https://api.github.com/users/' + encodeURIComponent(username));
+                const apiUrl = 'https://api.github.com/users/' + encodeURIComponent(username);
+                const response = await fetch(apiUrl);
                 if (response.status === 200) {
                     return await response.json();
                 }
