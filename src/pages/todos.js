@@ -1353,16 +1353,12 @@ export async function todoPage(request, env) {
                     minute: '2-digit' 
                 });
                 
-                // 渲染标签 - 使用标签的颜色
+                // 渲染标签 - 使用 MDUI chip
                 let tagsHtml = '';
                 if (todo.tags && todo.tags.length > 0) {
                     tagsHtml = '<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;">';
                     todo.tags.forEach(tagName => {
-                        // 从 allTags 中查找标签颜色
-                        const tagObj = allTags.find(t => (typeof t === 'object' ? t.name : t) === tagName);
-                        const tagColor = tagObj && typeof tagObj === 'object' ? tagObj.color : null;
-                        const bgStyle = tagColor ? 'background: ' + tagColor + ';' : 'background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);';
-                        tagsHtml += '<span style="padding: 2px 8px; ' + bgStyle + ' color: white; border-radius: 10px; font-size: 11px;">' + escapeHtml(tagName) + '</span>';
+                        tagsHtml += '<mdui-chip variant="filter" style="font-size: 11px; --mdui-comp-filter-chip-container-height: 24px;">' + escapeHtml(tagName) + '</mdui-chip>';
                     });
                     tagsHtml += '</div>';
                 }
