@@ -440,6 +440,9 @@ export async function todoPage(request, env) {
             <p>记录你的待办事项</p>
             ${userSection}
             <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
+            <button onclick="exportTodos()" style="position: absolute; right: 20px; top: 70%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); padding: 6px 14px; border-radius: 16px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-download"></i> 导出数据
+            </button>
             <button onclick="showResourceInfo()" style="position: absolute; left: 20px; top: 30%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.2); border: none; padding: 8px 12px; border-radius: 50%; cursor: pointer; font-size: 16px;"><i class="fas fa-info-circle"></i></button>
         </div>
         
@@ -493,13 +496,6 @@ export async function todoPage(request, env) {
                 <button id="filter-completed" class="filter-btn" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">已完成</button>
             </div>
             <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
-        </div>
-        
-        <div class="export-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center;">
-            <button class="export-btn" onclick="exportTodos()" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-                📥 导出数据 (JSON)
-            </button>
-            <p style="font-size: 12px; color: #999; margin-top: 8px;">导出所有待办事项，包括已完成的</p>
         </div>
         
         <div class="input-section">
