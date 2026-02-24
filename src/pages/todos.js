@@ -487,9 +487,9 @@ export async function todoPage(request, env) {
             <!-- 状态筛选 -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <span style="font-size: 14px; color: #666;">筛选:</span>
-                <mdui-button id="filter-all" class="filter-btn active" variant="filled" style="font-size: 12px; padding: 6px 12px;">全部</mdui-button>
-                <mdui-button id="filter-pending" class="filter-btn" variant="tonal" style="font-size: 12px; padding: 6px 12px;">未完成</mdui-button>
-                <mdui-button id="filter-completed" class="filter-btn" variant="tonal" style="font-size: 12px; padding: 6px 12px;">已完成</mdui-button>
+                <mdui-button id="filter-all" class="filter-btn active" variant="filled" style="--mdui-comp-filled-button-container-height: 32px; font-size: 12px; padding: 0 12px;">全部</mdui-button>
+                <mdui-button id="filter-pending" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">未完成</mdui-button>
+                <mdui-button id="filter-completed" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">已完成</mdui-button>
             </div>
             <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
         </div>
