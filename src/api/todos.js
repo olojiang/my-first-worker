@@ -5,11 +5,11 @@ export async function apiTodos(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
-  
+
   // 获取当前登录用户
   const session = await getSession(env, request);
   const currentUser = session?.data?.user;
-  
+
   // 打印用户信息到控制台
   if (currentUser) {
     console.log('Current User:', JSON.stringify({
@@ -22,7 +22,7 @@ export async function apiTodos(request, env) {
   } else {
     console.log('Current User: Not logged in');
   }
-  
+
   try {
     // 确保表存在 - 使用 prepare().run() 而不是 exec
     try {
@@ -36,77 +36,115 @@ export async function apiTodos(request, env) {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `).run();
-      
+
       // 尝试添加 user_login 列（用于存储用户登录名）
       try {
         await env.DB.prepare('ALTER TABLE todos ADD COLUMN user_login TEXT').run();
       } catch (alterErr) {
         // 列已存在，忽略错误
       }
-      
+
       // 尝试添加 tags 列（如果表已存在但缺少该列）
       try {
         await env.DB.prepare('ALTER TABLE todos ADD COLUMN tags TEXT').run();
       } catch (alterErr) {
         // 列已存在或表刚创建，忽略错误
       }
-      
+
       // 尝试添加 attachments 列（存储附件信息 JSON）
       try {
         await env.DB.prepare('ALTER TABLE todos ADD COLUMN attachments TEXT').run();
       } catch (alterErr) {
         // 列已存在，忽略错误
       }
+
+      // 创建共享关系表（如果不存在）
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS todo_shares (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            todo_id INTEGER NOT NULL,
+            owner_id TEXT NOT NULL,
+            shared_with_id TEXT NOT NULL,
+            shared_with_login TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(todo_id, shared_with_id)
+          )
+        `).run();
+      } catch (shareErr) {
+        console.log('Share table creation error:', shareErr);
+      }
     } catch (e) {
       // 忽略错误
     }
-    
-    // GET /api/todos - 获取所有待办（只返回当前用户的）
+
+    // GET /api/todos - 获取所有待办（包括自己创建的 + 共享给我的）
     if (method === 'GET' && path === '/api/todos') {
-      let result;
+      let todos = [];
+
       if (currentUser) {
-        // 优先使用 user_login 匹配，同时兼容 user_id
-        result = await env.DB.prepare(
+        // 1. 获取自己创建的 todo
+        const myResult = await env.DB.prepare(
           'SELECT * FROM todos WHERE user_login = ? OR (user_login IS NULL AND user_id = ?) ORDER BY created_at DESC'
         )
           .bind(currentUser.login, currentUser.id)
           .all();
-      } else {
-        // 未登录时返回空数组（或可以获取所有待办）
-        result = { results: [] };
+
+        const myTodos = (myResult.results || []).map(todo => ({
+          ...todo,
+          tags: todo.tags ? JSON.parse(todo.tags) : [],
+          attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+          isShared: false,
+          sharedBy: null
+        }));
+
+        // 2. 获取共享给我的 todo
+        const sharedResult = await env.DB.prepare(`
+          SELECT t.*, ts.owner_id as shared_by_id, ts.shared_with_login
+          FROM todos t
+          INNER JOIN todo_shares ts ON t.id = ts.todo_id
+          WHERE ts.shared_with_id = ?
+          ORDER BY t.created_at DESC
+        `).bind(currentUser.id).all();
+
+        const sharedTodos = (sharedResult.results || []).map(todo => ({
+          ...todo,
+          tags: todo.tags ? JSON.parse(todo.tags) : [],
+          attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+          isShared: true,
+          sharedBy: todo.shared_by_id
+        }));
+
+        todos = [...myTodos, ...sharedTodos];
       }
-      const todos = (result.results || []).map(todo => ({
-        ...todo,
-        tags: todo.tags ? JSON.parse(todo.tags) : [],
-        attachments: todo.attachments ? JSON.parse(todo.attachments) : []
-      }));
+
       return jsonResponse({
         success: true,
         todos: todos,
         user: currentUser ? { id: currentUser.id, login: currentUser.login } : null
       });
     }
-    
+
     // POST /api/todos - 创建待办
     if (method === 'POST' && path === '/api/todos') {
       const body = await request.json();
       const text = body.text?.trim();
       const tags = body.tags || [];
       const attachments = body.attachments || [];
-      
+
       if (!text) {
         return jsonResponse({ success: false, error: '待办事项不能为空' }, 400);
       }
-      
+
       // 获取当前用户信息
       const userId = currentUser ? currentUser.id : null;
       const userLogin = currentUser ? currentUser.login : null;
-      
+
       // 插入数据 - 包含 user_id 和 user_login
       await env.DB.prepare('INSERT INTO todos (text, tags, attachments, user_id, user_login) VALUES (?, ?, ?, ?, ?)')
         .bind(text, JSON.stringify(tags), JSON.stringify(attachments), userId, userLogin)
         .run();
-      
+
       // 获取刚插入的数据
       const result = await env.DB.prepare('SELECT * FROM todos ORDER BY id DESC LIMIT 1').all();
       const todo = result.results?.[0];
@@ -114,62 +152,110 @@ export async function apiTodos(request, env) {
         todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
         todo.attachments = todo.attachments ? JSON.parse(todo.attachments) : [];
       }
-      
+
       return jsonResponse({ success: true, todo });
     }
-    
-    // PUT /api/todos/:id - 更新待办（只能更新自己的）
+
+    // PUT /api/todos/:id - 更新待办（创建者或共享接收者可修改）
     if (method === 'PUT' && path.match(/^\/api\/todos\/\d+$/)) {
       const id = parseInt(path.split('/').pop());
       const body = await request.json();
-      
-      // 先检查待办是否存在且属于当前用户
+
+      // 先检查待办是否存在
       const checkResult = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
       const existingTodo = checkResult.results?.[0];
-      
+
       if (!existingTodo) {
         return jsonResponse({ success: false, error: '待办不存在' }, 404);
       }
-      
-      // 验证权限：只能修改自己的待办
+
+      // 验证权限：创建者或共享接收者可修改
+      let hasPermission = false;
       if (currentUser) {
+        // 检查是否是创建者
         const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
         const currentUserId = currentUser.login || currentUser.id.toString();
-        if (todoOwner && todoOwner !== currentUserId) {
-          return jsonResponse({ success: false, error: '无权修改此待办' }, 403);
+        if (todoOwner === currentUserId) {
+          hasPermission = true;
+        } else {
+          // 检查是否是共享接收者
+          const shareCheck = await env.DB.prepare(
+            'SELECT * FROM todo_shares WHERE todo_id = ? AND shared_with_id = ?'
+          ).bind(id, currentUser.id).all();
+          if (shareCheck.results?.length > 0) {
+            hasPermission = true;
+          }
         }
-      } else {
-        // 未登录用户不能修改任何待办
-        return jsonResponse({ success: false, error: '请先登录' }, 401);
       }
-      
+
+      if (!hasPermission) {
+        return jsonResponse({ success: false, error: '无权修改此待办' }, 403);
+      }
+
       if (typeof body.done !== 'undefined') {
         await env.DB.prepare('UPDATE todos SET done = ? WHERE id = ?').bind(body.done ? 1 : 0, id).run();
       }
-      
+
       if (body.text) {
         await env.DB.prepare('UPDATE todos SET text = ? WHERE id = ?').bind(body.text, id).run();
       }
-      
+
       if (body.tags) {
         await env.DB.prepare('UPDATE todos SET tags = ? WHERE id = ?').bind(JSON.stringify(body.tags), id).run();
       }
-      
+
       const result = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
       const todo = result.results?.[0];
       if (todo) {
         todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
         todo.attachments = todo.attachments ? JSON.parse(todo.attachments) : [];
       }
-      
+
       return jsonResponse({ success: true, todo });
     }
-    
-    // DELETE /api/todos/:id - 删除待办（只能删除自己的）
+
+    // DELETE /api/todos/:id - 删除待办（只有创建者可删除）
     if (method === 'DELETE' && path.match(/^\/api\/todos\/\d+$/)) {
       const id = parseInt(path.split('/').pop());
+
+      // 先检查待办是否存在
+      const checkResult = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
+      const existingTodo = checkResult.results?.[0];
+
+      if (!existingTodo) {
+        return jsonResponse({ success: false, error: '待办不存在' }, 404);
+      }
+
+      // 验证权限：只有创建者可删除
+      if (currentUser) {
+        const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
+        const currentUserId = currentUser.login || currentUser.id.toString();
+        if (todoOwner !== currentUserId) {
+          return jsonResponse({ success: false, error: '只有创建者可以删除此待办' }, 403);
+        }
+      } else {
+        // 未登录用户不能删除任何待办
+        return jsonResponse({ success: false, error: '请先登录' }, 401);
+      }
+
+      // 删除相关的共享记录
+      await env.DB.prepare('DELETE FROM todo_shares WHERE todo_id = ?').bind(id).run();
+
+      await env.DB.prepare('DELETE FROM todos WHERE id = ?').bind(id).run();
+      return jsonResponse({ success: true });
+    }
+    
+    // POST /api/todos/:id/share - 共享待办给指定用户
+    if (method === 'POST' && path.match(/^\/api\/todos\/\d+\/share$/)) {
+      const id = parseInt(path.split('/')[3]);
+      const body = await request.json();
+      const shareWithLogin = body.shared_with_login?.trim();
       
-      // 先检查待办是否存在且属于当前用户
+      if (!shareWithLogin) {
+        return jsonResponse({ success: false, error: '请指定要共享的用户' }, 400);
+      }
+      
+      // 检查待办是否存在且属于当前用户
       const checkResult = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
       const existingTodo = checkResult.results?.[0];
       
@@ -177,22 +263,94 @@ export async function apiTodos(request, env) {
         return jsonResponse({ success: false, error: '待办不存在' }, 404);
       }
       
-      // 验证权限：只能删除自己的待办
-      if (currentUser) {
-        const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
-        const currentUserId = currentUser.login || currentUser.id.toString();
-        if (todoOwner && todoOwner !== currentUserId) {
-          return jsonResponse({ success: false, error: '无权删除此待办' }, 403);
-        }
-      } else {
-        // 未登录用户不能删除任何待办
-        return jsonResponse({ success: false, error: '请先登录' }, 401);
+      // 验证权限：只有创建者可共享
+      const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
+      const currentUserId = currentUser?.login || currentUser?.id?.toString();
+      if (todoOwner !== currentUserId) {
+        return jsonResponse({ success: false, error: '只有创建者可以共享此待办' }, 403);
       }
       
-      await env.DB.prepare('DELETE FROM todos WHERE id = ?').bind(id).run();
-      return jsonResponse({ success: true });
+      // 不能共享给自己
+      if (shareWithLogin === currentUser?.login) {
+        return jsonResponse({ success: false, error: '不能共享给自己' }, 400);
+      }
+      
+      // 查找目标用户的 ID（通过 user_login 查找）
+      // 注意：这里假设共享目标用户可能已经存在于系统中
+      // 实际实现中可能需要通过其他方式获取用户 ID
+      // 简化处理：使用 login 作为 shared_with_id
+      
+      try {
+        await env.DB.prepare(
+          'INSERT INTO todo_shares (todo_id, owner_id, shared_with_id, shared_with_login) VALUES (?, ?, ?, ?)'
+        ).bind(id, currentUser.id.toString(), shareWithLogin, shareWithLogin).run();
+        
+        return jsonResponse({ success: true, message: '共享成功' });
+      } catch (e) {
+        if (e.message?.includes('UNIQUE constraint failed')) {
+          return jsonResponse({ success: false, error: '已经共享给该用户' }, 400);
+        }
+        throw e;
+      }
     }
     
+    // DELETE /api/todos/:id/share/:userId - 取消共享
+    if (method === 'DELETE' && path.match(/^\/api\/todos\/\d+\/share\/.+$/)) {
+      const parts = path.split('/');
+      const id = parseInt(parts[3]);
+      const sharedWithId = decodeURIComponent(parts[5]);
+      
+      // 检查待办是否存在
+      const checkResult = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
+      const existingTodo = checkResult.results?.[0];
+      
+      if (!existingTodo) {
+        return jsonResponse({ success: false, error: '待办不存在' }, 404);
+      }
+      
+      // 验证权限：只有创建者可取消共享
+      const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
+      const currentUserId = currentUser?.login || currentUser?.id?.toString();
+      if (todoOwner !== currentUserId) {
+        return jsonResponse({ success: false, error: '只有创建者可以取消共享' }, 403);
+      }
+      
+      await env.DB.prepare(
+        'DELETE FROM todo_shares WHERE todo_id = ? AND shared_with_id = ?'
+      ).bind(id, sharedWithId).run();
+      
+      return jsonResponse({ success: true, message: '已取消共享' });
+    }
+    
+    // GET /api/todos/:id/shares - 获取待办的共享列表
+    if (method === 'GET' && path.match(/^\/api\/todos\/\d+\/shares$/)) {
+      const id = parseInt(path.split('/')[3]);
+      
+      // 检查待办是否存在
+      const checkResult = await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).all();
+      const existingTodo = checkResult.results?.[0];
+      
+      if (!existingTodo) {
+        return jsonResponse({ success: false, error: '待办不存在' }, 404);
+      }
+      
+      // 验证权限：只有创建者可查看共享列表
+      const todoOwner = existingTodo.user_login || existingTodo.user_id?.toString();
+      const currentUserId = currentUser?.login || currentUser?.id?.toString();
+      if (todoOwner !== currentUserId) {
+        return jsonResponse({ success: false, error: '无权查看' }, 403);
+      }
+      
+      const sharesResult = await env.DB.prepare(
+        'SELECT shared_with_id, shared_with_login, created_at FROM todo_shares WHERE todo_id = ?'
+      ).bind(id).all();
+      
+      return jsonResponse({ 
+        success: true, 
+        shares: sharesResult.results || [] 
+      });
+    }
+
     // GET /api/todos/export - 导出所有待办为 JSON 文件
     if (method === 'GET' && path === '/api/todos/export') {
       const result = await env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC').all();
@@ -200,7 +358,7 @@ export async function apiTodos(request, env) {
         ...todo,
         tags: todo.tags ? JSON.parse(todo.tags) : []
       }));
-      
+
       // 生成导出数据
       const exportData = {
         exportTime: new Date().toISOString(),
@@ -209,14 +367,14 @@ export async function apiTodos(request, env) {
         pendingCount: todos.filter(t => !t.done).length,
         todos: todos
       };
-      
+
       const jsonContent = JSON.stringify(exportData, null, 2);
       const blob = new TextEncoder().encode(jsonContent);
-      
+
       // 生成文件名
       const dateStr = new Date().toISOString().split('T')[0];
       const filename = `todos-export-${dateStr}.json`;
-      
+
       return new Response(blob, {
         status: 200,
         headers: {
@@ -233,12 +391,12 @@ export async function apiTodos(request, env) {
       const updateResult = await env.DB.prepare(
         "UPDATE todos SET user_id = 2581485, user_login = 'olojiang' WHERE user_id IS NULL AND user_login IS NULL"
       ).run();
-      
+
       // 获取更新后的统计
       const statsResult = await env.DB.prepare(
         'SELECT COUNT(*) as total, SUM(CASE WHEN user_id = 2581485 THEN 1 ELSE 0 END) as olojiang_count FROM todos'
       ).all();
-      
+
       return jsonResponse({
         success: true,
         message: 'Migration completed',
@@ -246,14 +404,14 @@ export async function apiTodos(request, env) {
         stats: statsResult.results?.[0] || {}
       });
     }
-    
+
     return jsonResponse({ error: 'Not Found' }, 404);
-    
+
   } catch (e) {
-    return jsonResponse({ 
+    return jsonResponse({
       success: false,
-      error: '操作失败', 
-      message: e.message 
+      error: '操作失败',
+      message: e.message
     }, 500);
   }
 }
