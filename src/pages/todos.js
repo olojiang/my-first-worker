@@ -2076,7 +2076,7 @@ export async function todoPage(request, env) {
             // 从 API 返回的 user 信息中获取当前用户
             let currentUserLogin = '';
             try {
-                const userResponse = await fetch('/api/user');
+                const userResponse = await fetch('/api/me');
                 const userData = await userResponse.json();
                 if (userData.authenticated && userData.user) {
                     currentUserLogin = userData.user.login;
