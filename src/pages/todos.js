@@ -570,13 +570,13 @@ export async function todoPage(request, env) {
                 return;
             }
             
-            shareListEl.innerHTML = shareWithUsers.map((user, index) => `
-                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #e3f2fd; border-radius: 16px; font-size: 13px; color: #1976d2;">
-                    <i class="fas fa-user" style="font-size: 11px;"></i>
-                    ${escapeHtml(user)}
-                    <i class="fas fa-times" style="cursor: pointer; margin-left: 4px;" onclick="removeShareUser(${index})"></i>
-                </span>
-            `).join('');
+            shareListEl.innerHTML = shareWithUsers.map((user, index) =>
+                '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #e3f2fd; border-radius: 16px; font-size: 13px; color: #1976d2;">'
+                    + '<i class="fas fa-user" style="font-size: 11px;"></i>'
+                    + escapeHtml(user)
+                    + '<i class="fas fa-times" style="cursor: pointer; margin-left: 4px;" onclick="removeShareUser(' + index + ')"></i>'
+                + '</span>'
+            ).join('');
         }
         
         // 添加共享用户
