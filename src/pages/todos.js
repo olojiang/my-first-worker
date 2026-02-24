@@ -1351,12 +1351,11 @@ export async function todoPage(request, env) {
         // 显示带撤销按钮的提示
         function showToastWithUndo(message, originalText, optimizedText) {
             const toast = document.getElementById('toast');
-            toast.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span>${message}</span>
-                    <mdui-button id="undo-btn" variant="text" style="color: inherit; --mdui-comp-text-button-container-height: 28px; font-size: 12px; padding: 0 8px;">撤销</mdui-button>
-                </div>
-            `;
+            toast.innerHTML = 
+                '<div style="display: flex; align-items: center; gap: 12px;">' +
+                    '<span>' + message + '</span>' +
+                    '<mdui-button id="undo-btn" variant="text" style="color: inherit; --mdui-comp-text-button-container-height: 28px; font-size: 12px; padding: 0 8px;">撤销</mdui-button>' +
+                '</div>';
             toast.className = 'toast success';
             toast.classList.add('show');
             
