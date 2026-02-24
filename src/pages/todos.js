@@ -472,33 +472,42 @@ export async function todoPage(request, env) {
         </div>
         
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <!-- 多选按钮 -->
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
-                <mdui-button id="toggle-multi-select" variant="tonal" icon="check_box">多选</mdui-button>
-                <mdui-button id="batch-complete" variant="filled" icon="check" style="display: none;">完成</mdui-button>
-                <mdui-button id="batch-delete" variant="filled" icon="delete" style="display: none;">删除</mdui-button>
-                <mdui-button id="batch-cancel" variant="tonal" icon="close" style="display: none;">取消</mdui-button>
-                <span id="selected-count" style="font-size: 14px; color: #666; display: none;">已选 0 项</span>
+            <!-- 顶部按钮行：筛选 | 多选 -->
+            <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                <mdui-button id="toggle-filter-panel" variant="tonal" icon="filter_list">筛选</mdui-button>
+                
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <mdui-button id="toggle-multi-select" variant="tonal" icon="check_box">多选</mdui-button>
+                    <mdui-button id="batch-complete" variant="filled" icon="check" style="display: none;">完成</mdui-button>
+                    <mdui-button id="batch-delete" variant="filled" icon="delete" style="display: none;">删除</mdui-button>
+                    <mdui-button id="batch-cancel" variant="tonal" icon="close" style="display: none;">取消</mdui-button>
+                    <span id="selected-count" style="font-size: 14px; color: #666; display: none;">已选 0 项</span>
+                </div>
             </div>
             
-            <!-- 搜索和标签筛选 -->
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
-                <mdui-text-field id="search-input" placeholder="搜索待办内容..." style="flex: 1;" oninput="toggleClearButton()"></mdui-text-field>
-                <mdui-button id="clear-btn" onclick="clearFilters()" variant="outlined" icon="close" style="display: none;">清除</mdui-button>
+            <!-- 筛选面板（默认隐藏） -->
+            <div id="filter-panel" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0;">
+                <!-- 搜索 -->
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
+                    <mdui-text-field id="search-input" placeholder="搜索待办内容..." style="flex: 1;" oninput="toggleClearButton()"></mdui-text-field>
+                    <mdui-button id="clear-btn" onclick="clearFilters()" variant="outlined" icon="close" style="display: none;">清除</mdui-button>
+                </div>
+                
+                <!-- 标签筛选 -->
+                <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 14px; color: #666;">筛选标签:</span>
+                    <span style="font-size: 12px; color: #999;">加载中...</span>
+                </div>
+                
+                <!-- 状态筛选 -->
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-size: 14px; color: #666;">筛选:</span>
+                    <mdui-button id="filter-all" class="filter-btn active" variant="filled" style="--mdui-comp-filled-button-container-height: 32px; font-size: 12px; padding: 0 12px;">全部</mdui-button>
+                    <mdui-button id="filter-pending" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">未完成</mdui-button>
+                    <mdui-button id="filter-completed" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">已完成</mdui-button>
+                </div>
+                <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
             </div>
-            <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
-                <span style="font-size: 14px; color: #666;">筛选标签:</span>
-                <span style="font-size: 12px; color: #999;">加载中...</span>
-            </div>
-            
-            <!-- 状态筛选 -->
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <span style="font-size: 14px; color: #666;">筛选:</span>
-                <mdui-button id="filter-all" class="filter-btn active" variant="filled" style="--mdui-comp-filled-button-container-height: 32px; font-size: 12px; padding: 0 12px;">全部</mdui-button>
-                <mdui-button id="filter-pending" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">未完成</mdui-button>
-                <mdui-button id="filter-completed" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">已完成</mdui-button>
-            </div>
-            <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
         </div>
         
         <div class="input-section">
@@ -658,6 +667,17 @@ export async function todoPage(request, env) {
                 console.error('[初始化] 绑定筛选按钮出错:', e);
             }
             
+            // 绑定筛选面板按钮
+            try {
+                const toggleFilterBtn = document.getElementById('toggle-filter-panel');
+                if (toggleFilterBtn) {
+                    toggleFilterBtn.addEventListener('click', toggleFilterPanel);
+                    console.log('[初始化] 筛选面板按钮绑定成功');
+                }
+            } catch (e) {
+                console.error('[初始化] 绑定筛选面板按钮出错:', e);
+            }
+            
             // 绑定多选按钮
             try {
                 const toggleMultiBtn = document.getElementById('toggle-multi-select');
@@ -717,6 +737,21 @@ export async function todoPage(request, env) {
             updateBatchButtons();
             renderTodos();
             console.log('[多选] 退出多选模式');
+        }
+        
+        // 切换筛选面板显示
+        function toggleFilterPanel() {
+            const panel = document.getElementById('filter-panel');
+            const btn = document.getElementById('toggle-filter-panel');
+            if (panel) {
+                if (panel.style.display === 'none') {
+                    panel.style.display = 'block';
+                    btn.setAttribute('variant', 'filled');
+                } else {
+                    panel.style.display = 'none';
+                    btn.setAttribute('variant', 'tonal');
+                }
+            }
         }
         
         // 更新批量操作按钮显示
