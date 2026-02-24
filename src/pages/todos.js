@@ -1352,9 +1352,9 @@ export async function todoPage(request, env) {
         function showToastWithUndo(message, originalText, optimizedText) {
             const toast = document.getElementById('toast');
             toast.innerHTML = 
-                '<div style="display: flex; align-items: center; gap: 12px;">' +
-                    '<span>' + message + '</span>' +
-                    '<mdui-button id="undo-btn" variant="text" style="color: inherit; --mdui-comp-text-button-container-height: 28px; font-size: 12px; padding: 0 8px;">撤销</mdui-button>' +
+                '<div style="display: flex; align-items: center; gap: 12px; white-space: nowrap;">' +
+                    '<span style="white-space: nowrap;">' + message + '</span>' +
+                    '<mdui-button id="undo-btn" variant="text" style="color: inherit; --mdui-comp-text-button-container-height: 28px; font-size: 12px; padding: 0 8px; white-space: nowrap; flex-shrink: 0;">撤销</mdui-button>' +
                 '</div>';
             toast.className = 'toast success';
             toast.classList.add('show');
