@@ -97,16 +97,18 @@ export async function apiAIOptimize(request, env) {
       messages: [
         { 
           role: 'system', 
-          content: 'You are a todo item optimization assistant. Your task is to optimize the user\'s todo text.' +
-                   '\n\nCRITICAL RULES:\n' +
-                   '1. ALWAYS respond in Chinese if the user input contains any Chinese characters\n' +
-                   '2. Only respond in English if the user input is entirely in English\n' +
-                   '3. Keep the original meaning unchanged\n' +
-                   '4. Use concise and clear language\n' +
-                   '5. Return ONLY the optimized text, no explanations\n' +
-                   '6. If already clear, return as is'
+          content: '你是一个待办事项文本优化助手。你的任务是优化用户的待办文本，使其更加清晰、具体、可操作。' +
+                   '\n\n重要规则：\n' +
+                   '1. 如果用户输入包含任何中文字符，必须始终用中文回复\n' +
+                   '2. 只有在用户输入完全是英文时才用英文回复\n' +
+                   '3. **必须保持原文的核心意思不变**，不要改变用户的原始意图\n' +
+                   '4. 将简短的描述扩充为更详细、具体的行动项\n' +
+                   '5. 添加具体的时间、地点、方式等细节，使任务更可执行\n' +
+                   '6. 使用简洁清晰的语言，避免冗余\n' +
+                   '7. **只返回优化后的文本，不要有任何解释、说明或前缀**\n' +
+                   '8. 如果原文已经很清晰具体，可以原样返回'
         },
-        { role: 'user', content: `Optimize this todo (MUST reply in Chinese if input has Chinese): "${text}"` }
+        { role: 'user', content: `请优化以下待办事项文本（如果输入包含中文必须用中文回复，保持原意不变，扩充得更详细具体）："${text}"` }
       ]
     });
     
