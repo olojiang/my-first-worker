@@ -461,34 +461,35 @@ export async function todoPage(request, env) {
             </div>
         </div>
         
-        <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <button id="toggle-multi-select" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">
-                <i class="fas fa-check-square"></i> 多选
-            </button>
-            <button id="batch-complete" style="padding: 8px 16px; border: none; background: #4ade80; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
-                <i class="fas fa-check"></i> 完成
-            </button>
-            <button id="batch-delete" style="padding: 8px 16px; border: none; background: #ff6b6b; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
-                <i class="fas fa-trash"></i> 删除
-            </button>
-            <button id="batch-cancel" style="padding: 8px 16px; border: none; background: #e0e0e0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
-                <i class="fas fa-times"></i> 取消
-            </button>
-            <span id="selected-count" style="font-size: 14px; color: #666; display: none;">已选 0 项</span>
-        </div>
-        
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+            <!-- 多选按钮 -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
+                <button id="toggle-multi-select" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">
+                    <i class="fas fa-check-square"></i> 多选
+                </button>
+                <button id="batch-complete" style="padding: 8px 16px; border: none; background: #4ade80; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
+                    <i class="fas fa-check"></i> 完成
+                </button>
+                <button id="batch-delete" style="padding: 8px 16px; border: none; background: #ff6b6b; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+                <button id="batch-cancel" style="padding: 8px 16px; border: none; background: #e0e0e0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <span id="selected-count" style="font-size: 14px; color: #666; display: none;">已选 0 项</span>
+            </div>
+            
+            <!-- 搜索和标签筛选 -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
                 <input type="text" id="search-input" placeholder="搜索待办内容..." style="flex: 1; padding: 10px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none;">
                 <button onclick="clearFilters()" style="padding: 10px 20px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;"><i class="fas fa-times"></i> 清除</button>
             </div>
-            <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
                 <span style="font-size: 14px; color: #666;">筛选标签:</span>
                 <span style="font-size: 12px; color: #999;">加载中...</span>
             </div>
-        </div>
-        
-        <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            
+            <!-- 状态筛选 -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <span style="font-size: 14px; color: #666;">筛选:</span>
                 <button id="filter-all" class="filter-btn active" style="padding: 8px 16px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 20px; cursor: pointer; font-size: 13px;">全部</button>
