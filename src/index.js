@@ -1966,17 +1966,29 @@ async function todoPage(request, env) {
                         '<h3 style="margin: 0 0 20px 0; color: #333;">Cloudflare Resources</h3>' +
                         '<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
-                                '<div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">' + data.kv.count + '</div>' +
+                                '<div style="font-size: 24px; font-weight: bold; color: #ff6b6b;">' + data.kv.count + ' / ' + data.kv.limit + '</div>' +
                                 '<div style="font-size: 14px; color: #666;">KV Items</div>' +
+                                '<div style="font-size: 11px; color: #999; margin-top: 4px;">Free: ' + data.kv.limit + ' keys</div>' +
+                                '<div style="font-size: 11px; color: ' + (data.kv.percent > 80 ? '#ff6b6b' : '#4ade80') + '; margin-top: 2px;">' + data.kv.percent + '% used</div>' +
                             '</div>' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
-                                '<div style="font-size: 24px; font-weight: bold; color: #4ade80;">' + data.db.count + '</div>' +
+                                '<div style="font-size: 24px; font-weight: bold; color: #4ade80;">' + data.db.count + ' / ' + data.db.limit + '</div>' +
                                 '<div style="font-size: 14px; color: #666;">DB Records</div>' +
+                                '<div style="font-size: 11px; color: #999; margin-top: 4px;">Free: ' + data.db.limit + ' rows, 500MB</div>' +
+                                '<div style="font-size: 11px; color: ' + (data.db.percent > 80 ? '#ff6b6b' : '#4ade80') + '; margin-top: 2px;">' + data.db.percent + '% used</div>' +
                             '</div>' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
                                 '<div style="font-size: 24px; font-weight: bold; color: #54a0ff;">' + data.r2.count + '</div>' +
                                 '<div style="font-size: 14px; color: #666;">R2 Objects</div>' +
+                                '<div style="font-size: 11px; color: #999; margin-top: 4px;">Free: 10GB storage, 10M req/month</div>' +
                             '</div>' +
+                        '</div>' +
+                        '<div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; color: #856404; text-align: left;">' +
+                            '<strong>Free Tier Limits:</strong><br>' +
+                            '• KV: ' + data.kv.limit + ' keys, 1GB storage<br>' +
+                            '• D1: ' + data.db.limit + ' rows, 500MB storage<br>' +
+                            '• R2: 10GB storage, 10M requests/month<br>' +
+                            '• Workers: 100k requests/day' +
                         '</div>' +
                         '<button onclick="this.parentElement.parentElement.remove()" style="padding: 10px 30px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">Close</button>';
                     
@@ -3359,9 +3371,19 @@ async function apiResources(request, env) {
     
     return jsonResponse({
       success: true,
-      kv: { count: kvCount },
-      db: { count: dbCount },
-      r2: { count: r2Count }
+      kv: { 
+        count: kvCount, 
+        limit: 1000000, // 1 million keys
+        percent: Math.round((kvCount / 1000000) * 100)
+      },
+      db: { 
+        count: dbCount, 
+        limit: 500000, // 500k rows
+        percent: Math.round((dbCount / 500000) * 100)
+      },
+      r2: { 
+        count: r2Count 
+      }
     });
   } catch (e) {
     return jsonResponse({ 
