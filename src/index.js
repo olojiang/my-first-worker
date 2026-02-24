@@ -1650,7 +1650,7 @@ async function todoPage(request, env) {
                 <textarea class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="500" style="min-height: 80px; resize: vertical; font-family: inherit;"></textarea>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <button class="add-btn" id="add-btn" style="flex: 1;">添加</button>
-                    <button class="add-btn" id="ai-optimize-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><i class="fas fa-magic"></i> AI 优化</button>
+                    <button class="add-btn" id="ai-optimize-btn" style="flex: 1; background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);"><i class="fas fa-magic"></i> AI 优化</button>
                 </div>
             </div>
             <div class="tags-select" id="tags-select" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
