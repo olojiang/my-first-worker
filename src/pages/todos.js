@@ -1606,13 +1606,43 @@ export async function todoPage(request, env) {
                 
                 // 创建者和共享信息
                 let ownerHtml = '';
-                if (todo.user_login) {
-                    ownerHtml += '<div style="margin-top: 8px; font-size: 12px; color: #999; display: flex; align-items: center; gap: 8px;">';
-                    ownerHtml += '<span>创建者: ' + escapeHtml(todo.user_login) + '</span>';
+                
+                // 获取共享用户列表（从 todo 的 shares 属性或通过 API 获取）
+                const shares = todo.shares || [];
+                const hasShares = shares.length > 0 || todo.isShared;
+                
+                // 如果是共享项（自己创建的共享给别人，或别人共享给我），显示创建者和共享信息
+                if (hasShares || todo.isShared) {
+                    ownerHtml += '<div style="margin-top: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 6px;">';
                     
-                    // 如果是共享的 todo，显示共享信息
-                    if (todo.isShared) {
-                        ownerHtml += '<span style="color: #f59e0b;"><i class="fas fa-share-alt"></i> 共享项目</span>';
+                    // 显示创建者
+                    if (todo.user_login) {
+                        ownerHtml += '<div style="display: flex; align-items: center; gap: 6px; color: #666;">';
+                        ownerHtml += '<img src="https://github.com/' + encodeURIComponent(todo.user_login) + '.png?size=20" style="width: 16px; height: 16px; border-radius: 50%;" onerror="this.style.display=\'none\'">';
+                        ownerHtml += '<span>创建者: ' + escapeHtml(todo.user_login) + '</span>';
+                        ownerHtml += '</div>';
+                    }
+                    
+                    // 显示共享标记
+                    if (hasShares || todo.isShared) {
+                        ownerHtml += '<div style="display: flex; align-items: center; gap: 6px; color: #f59e0b;">';
+                        ownerHtml += '<i class="fas fa-share-alt"></i>';
+                        ownerHtml += '<span>共享项目</span>';
+                        ownerHtml += '</div>';
+                    }
+                    
+                    // 显示所有共享人
+                    if (shares.length > 0) {
+                        ownerHtml += '<div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">';
+                        ownerHtml += '<span style="color: #999;">共享给:</span>';
+                        shares.forEach(share => {
+                            const sharedUser = share.shared_with_login || share.shared_with_id;
+                            ownerHtml += '<span style="display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; background: #f0f0f0; border-radius: 10px; font-size: 11px;">';
+                            ownerHtml += '<img src="https://github.com/' + encodeURIComponent(sharedUser) + '.png?size=16" style="width: 12px; height: 12px; border-radius: 50%;" onerror="this.style.display=\'none\'">';
+                            ownerHtml += escapeHtml(sharedUser);
+                            ownerHtml += '</span>';
+                        });
+                        ownerHtml += '</div>';
                     }
                     
                     ownerHtml += '</div>';

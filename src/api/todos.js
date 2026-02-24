@@ -90,13 +90,28 @@ export async function apiTodos(request, env) {
           .bind(currentUser.login, currentUser.id)
           .all();
 
-        const myTodos = (myResult.results || []).map(todo => ({
-          ...todo,
-          tags: todo.tags ? JSON.parse(todo.tags) : [],
-          attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
-          isShared: false,
-          sharedBy: null
-        }));
+        // 获取自己创建的所有 todo 的共享信息
+        const myTodoIds = (myResult.results || []).map(t => t.id);
+        let myTodoShares = [];
+        if (myTodoIds.length > 0) {
+          const placeholders = myTodoIds.map(() => '?').join(',');
+          const sharesResult = await env.DB.prepare(
+            `SELECT todo_id, shared_with_id, shared_with_login FROM todo_shares WHERE todo_id IN (${placeholders})`
+          ).bind(...myTodoIds).all();
+          myTodoShares = sharesResult.results || [];
+        }
+
+        const myTodos = (myResult.results || []).map(todo => {
+          const shares = myTodoShares.filter(s => s.todo_id === todo.id);
+          return {
+            ...todo,
+            tags: todo.tags ? JSON.parse(todo.tags) : [],
+            attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+            isShared: false,
+            sharedBy: null,
+            shares: shares
+          };
+        });
 
         // 2. 获取共享给我的 todo
         const sharedResult = await env.DB.prepare(`
@@ -107,13 +122,28 @@ export async function apiTodos(request, env) {
           ORDER BY t.created_at DESC
         `).bind(currentUser.id.toString(), currentUser.login).all();
 
-        const sharedTodos = (sharedResult.results || []).map(todo => ({
-          ...todo,
-          tags: todo.tags ? JSON.parse(todo.tags) : [],
-          attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
-          isShared: true,
-          sharedBy: todo.shared_by_id
-        }));
+        // 获取共享 todo 的共享信息
+        const sharedTodoIds = (sharedResult.results || []).map(t => t.id);
+        let sharedTodoShares = [];
+        if (sharedTodoIds.length > 0) {
+          const placeholders = sharedTodoIds.map(() => '?').join(',');
+          const sharesResult = await env.DB.prepare(
+            `SELECT todo_id, shared_with_id, shared_with_login FROM todo_shares WHERE todo_id IN (${placeholders})`
+          ).bind(...sharedTodoIds).all();
+          sharedTodoShares = sharesResult.results || [];
+        }
+
+        const sharedTodos = (sharedResult.results || []).map(todo => {
+          const shares = sharedTodoShares.filter(s => s.todo_id === todo.id);
+          return {
+            ...todo,
+            tags: todo.tags ? JSON.parse(todo.tags) : [],
+            attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+            isShared: true,
+            sharedBy: todo.shared_by_id,
+            shares: shares
+          };
+        });
 
         todos = [...myTodos, ...sharedTodos];
       }
