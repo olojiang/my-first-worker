@@ -1348,6 +1348,35 @@ export async function todoPage(request, env) {
             }, 2000);
         }
         
+        // 显示带撤销按钮的提示
+        function showToastWithUndo(message, originalText, optimizedText) {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span>${message}</span>
+                    <mdui-button id="undo-btn" variant="text" style="color: inherit; --mdui-comp-text-button-container-height: 28px; font-size: 12px; padding: 0 8px;">撤销</mdui-button>
+                </div>
+            `;
+            toast.className = 'toast success';
+            toast.classList.add('show');
+            
+            // 绑定撤销按钮
+            const undoBtn = document.getElementById('undo-btn');
+            if (undoBtn) {
+                undoBtn.addEventListener('click', () => {
+                    const input = document.getElementById('todo-input');
+                    input.value = originalText;
+                    toast.classList.remove('show');
+                    showToast('已撤销', 'success');
+                });
+            }
+            
+            // 5秒后自动隐藏
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+        
         // 加载待办列表
         async function loadTodos() {
             console.log('[loadTodos] 开始加载待办列表...');
@@ -1734,7 +1763,7 @@ export async function todoPage(request, env) {
                     // 显示优化前后的对比
                     if (data.optimized !== originalText) {
                         input.value = data.optimized;
-                        showToast('AI 已优化！原意："' + originalText.substring(0, 30) + (originalText.length > 30 ? '...' : '') + '"', 'success');
+                        showToastWithUndo('AI 已优化！', originalText, data.optimized);
                     } else {
                         showToast('文本已经很清晰了，无需优化', 'success');
                     }
