@@ -3876,6 +3876,13 @@ async function apiAttachments(request, env) {
       object.writeHttpMetadata(headers);
       headers.set('etag', object.httpEtag);
       headers.set('Access-Control-Allow-Origin', '*');
+      headers.set('Access-Control-Allow-Methods', 'GET, DELETE');
+      headers.set('Access-Control-Allow-Headers', '*');
+      
+      // 确保 Content-Type 被设置
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/octet-stream');
+      }
       
       return new Response(object.body, { headers });
       
