@@ -469,6 +469,10 @@ export async function todoPage(request, env) {
                 <div class="stat-value" id="completed-count">0</div>
                 <div class="stat-label">已完成</div>
             </div>
+            <div class="stat-item">
+                <div class="stat-value" id="shared-count" style="color: #f59e0b;">0</div>
+                <div class="stat-label">共享给我</div>
+            </div>
         </div>
         
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: all 0.3s ease;">
@@ -1833,10 +1837,12 @@ export async function todoPage(request, env) {
             const total = todos.length;
             const completed = todos.filter(t => t.done).length;
             const pending = total - completed;
+            const sharedToMe = todos.filter(t => t.isShared).length;
             
             document.getElementById('total-count').textContent = total;
             document.getElementById('pending-count').textContent = pending;
             document.getElementById('completed-count').textContent = completed;
+            document.getElementById('shared-count').textContent = sharedToMe;
         }
         
         // 添加待办
