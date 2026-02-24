@@ -487,9 +487,9 @@ export async function todoPage(request, env) {
             <!-- 状态筛选 -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <span style="font-size: 14px; color: #666;">筛选:</span>
-                <mdui-button id="filter-all" class="filter-btn active" variant="filled">全部</mdui-button>
-                <mdui-button id="filter-pending" class="filter-btn" variant="tonal">未完成</mdui-button>
-                <mdui-button id="filter-completed" class="filter-btn" variant="tonal">已完成</mdui-button>
+                <mdui-button id="filter-all" class="filter-btn active" variant="filled" style="font-size: 12px; padding: 6px 12px;">全部</mdui-button>
+                <mdui-button id="filter-pending" class="filter-btn" variant="tonal" style="font-size: 12px; padding: 6px 12px;">未完成</mdui-button>
+                <mdui-button id="filter-completed" class="filter-btn" variant="tonal" style="font-size: 12px; padding: 6px 12px;">已完成</mdui-button>
             </div>
             <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
         </div>
@@ -833,8 +833,7 @@ export async function todoPage(request, env) {
                     
                     const dialog = document.createElement('div');
                     dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center;';
-                    
-                    dialog.innerHTML = 
+                                        dialog.innerHTML = 
                         '<h3 style="margin: 0 0 20px 0; color: #333;">Cloudflare Resources</h3>' +
                         '<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
@@ -862,7 +861,7 @@ export async function todoPage(request, env) {
                             '• R2: 10GB storage, 10M requests/month<br>' +
                             '• Workers: 100k requests/day' +
                         '</div>' +
-                        '<button onclick="this.parentElement.parentElement.remove()" style="padding: 10px 30px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">Close</button>';
+                        '<mdui-button onclick="this.parentElement.parentElement.remove()" variant="filled" style="width: 100%;">Close</mdui-button>';
                     
                     overlay.appendChild(dialog);
                     document.body.appendChild(overlay);
@@ -972,7 +971,7 @@ export async function todoPage(request, env) {
                     '<span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">' + escapeHtml(att.name) + '</span>' +
                     '<span style="color: #999; font-size: 11px;">' + sizeStr + '</span>' +
                     (att.uploading ? '<i class="fas fa-spinner fa-spin" style="color: #999;"></i>' : '') +
-                    '<button class="remove-att-btn" style="background: none; border: none; color: #ff6b6b; cursor: pointer; padding: 4px;"><i class="fas fa-times"></i></button>' +
+                    '<mdui-button-icon class="remove-att-btn" icon="close" style="color: #ff6b6b;"></mdui-button-icon>' +
                 '</div>';
             });
             
@@ -1051,7 +1050,7 @@ export async function todoPage(request, env) {
             let innerHtml = '<div style="padding: 20px;">';
             innerHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
             innerHtml += '<h3 style="margin: 0; font-size: 16px;">' + escapeHtml(att.name) + '</h3>';
-            innerHtml += '<button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;">&times;</button>';
+            innerHtml += '<mdui-button-icon icon="close" onclick="this.parentElement.parentElement.parentElement.remove()"></mdui-button-icon>';
             innerHtml += '</div>';
             
             if (isImage) {
@@ -1386,9 +1385,9 @@ export async function todoPage(request, env) {
                 html += '<div class="' + itemClass + (isSelected ? ' selected' : '') + '" data-id="' + todo.id + '" onclick="' + (isMultiSelectMode ? 'toggleTodoSelection(' + todo.id + ')' : 'selectTodo(this)') + '">' +
                     multiSelectHtml +
                     '<div class="todo-actions">' +
-                        '<button class="edit-btn" onclick="event.stopPropagation(); editTodo(' + todo.id + ')" title="编辑" style="width: 36px; height: 36px; border: none; background: #3b82f6; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-pen"></i></button>' +
-                        '<button class="copy-btn" onclick="event.stopPropagation(); copyTodoText(' + todo.id + ')" title="复制内容" style="width: 36px; height: 36px; border: none; background: #4ade80; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-copy"></i></button>' +
-                        '<button class="delete-btn" onclick="event.stopPropagation(); deleteTodo(' + todo.id + ')" style="width: 36px; height: 36px; border: none; background: #ff6b6b; color: white; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i class="fas fa-times"></i></button>' +
+                        '<mdui-button-icon class="edit-btn" onclick="event.stopPropagation(); editTodo(' + todo.id + ')" title="编辑" icon="edit" style="color: #3b82f6;"></mdui-button-icon>' +
+                        '<mdui-button-icon class="copy-btn" onclick="event.stopPropagation(); copyTodoText(' + todo.id + ')" title="复制内容" icon="content_copy" style="color: #4ade80;"></mdui-button-icon>' +
+                        '<mdui-button-icon class="delete-btn" onclick="event.stopPropagation(); deleteTodo(' + todo.id + ')" title="删除" icon="delete" style="color: #ff6b6b;"></mdui-button-icon>' +
                     '</div>' +
                     (!isMultiSelectMode ? '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' : '') +
                     '<div class="todo-content">' +
@@ -1472,8 +1471,8 @@ export async function todoPage(request, env) {
                 '<textarea id="edit-textarea" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="输入待办内容...">' + escapeHtml(todo.text) + '</textarea>' +
                 '<div id="edit-tags-container">' + renderEditTags() + '</div>' +
                 '<div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">' +
-                    '<button id="edit-cancel" style="padding: 10px 20px; border: none; background: #e0e0e0; color: #333; border-radius: 8px; cursor: pointer; font-size: 14px;">取消</button>' +
-                    '<button id="edit-save" style="padding: 10px 20px; border: none; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border-radius: 8px; cursor: pointer; font-size: 14px;">保存</button>' +
+                    '<mdui-button id="edit-cancel" variant="outlined">取消</mdui-button>' +
+                    '<mdui-button id="edit-save" variant="filled">保存</mdui-button>' +
                 '</div>';
             
             overlay.appendChild(dialog);
