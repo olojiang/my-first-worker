@@ -73,7 +73,7 @@ export async function todoPage(request, env) {
         .header {
             text-align: center;
             padding: 30px 20px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+            background: linear-gradient(135deg, #4d4d4d 0%, #4c4e50 100%);
             margin: -20px -20px 20px -20px;
             color: white;
             position: sticky;
