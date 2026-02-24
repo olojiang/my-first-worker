@@ -2184,7 +2184,7 @@ async function todoPage(request, env) {
                 const icon = isImage ? 'fa-image' : (isText ? 'fa-file-alt' : 'fa-file');
                 const color = isImage ? '#ff6b6b' : (isText ? '#4ade80' : '#54a0ff');
                 
-                html += '<div class="todo-att-item" data-att-index="' + index + '" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 20px; cursor: pointer; font-size: 12px; border: 1px solid #e0e0e0; transition: all 0.2s;" onmouseover="this.style.background=\'#f0f0f0\'" onmouseout="this.style.background=\'white\'">' +
+                html += '<div class="todo-att-item" data-att-index="' + index + '" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 20px; cursor: pointer; font-size: 12px; border: 1px solid rgb(224,224,224); transition: all 0.2s;" onmouseover="this.style.background=\'rgb(240,240,240)\'" onmouseout="this.style.background=\'white\'">' +
                     '<i class="fas ' + icon + '" style="color: ' + color + ';"></i>' +
                     '<span style="max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + escapeHtml(att.name) + '</span>' +
                 '</div>';
