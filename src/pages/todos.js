@@ -443,10 +443,10 @@ export async function todoPage(request, env) {
             <p>记录你的待办事项</p>
             ${userSection}
             <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
-            <button onclick="exportTodos()" style="position: absolute; right: 20px; top: 70%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); padding: 6px 14px; border-radius: 16px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
-                <i class="fas fa-download"></i> 导出数据
-            </button>
-            <button onclick="showResourceInfo()" style="position: absolute; left: 20px; top: 30%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.2); border: none; padding: 8px 12px; border-radius: 50%; cursor: pointer; font-size: 16px;"><i class="fas fa-info-circle"></i></button>
+            <mdui-button onclick="exportTodos()" variant="text" style="position: absolute; right: 20px; top: 70%; transform: translateY(-50%); color: white;">
+                <mdui-icon name="download"></mdui-icon> 导出数据
+            </mdui-button>
+            <mdui-button-icon onclick="showResourceInfo()" icon="info" style="position: absolute; left: 20px; top: 30%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.2);"></mdui-button-icon>
         </div>
         
         <div class="stats">
@@ -467,25 +467,17 @@ export async function todoPage(request, env) {
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
             <!-- 多选按钮 -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
-                <button id="toggle-multi-select" style="padding: 8px 16px; border: none; background: #f0f0f0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px;">
-                    <i class="fas fa-check-square"></i> 多选
-                </button>
-                <button id="batch-complete" style="padding: 8px 16px; border: none; background: #4ade80; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
-                    <i class="fas fa-check"></i> 完成
-                </button>
-                <button id="batch-delete" style="padding: 8px 16px; border: none; background: #ff6b6b; color: white; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
-                    <i class="fas fa-trash"></i> 删除
-                </button>
-                <button id="batch-cancel" style="padding: 8px 16px; border: none; background: #e0e0e0; color: #666; border-radius: 20px; cursor: pointer; font-size: 13px; display: none;">
-                    <i class="fas fa-times"></i> 取消
-                </button>
+                <mdui-button id="toggle-multi-select" variant="tonal" icon="check_box">多选</mdui-button>
+                <mdui-button id="batch-complete" variant="filled" icon="check" style="display: none;">完成</mdui-button>
+                <mdui-button id="batch-delete" variant="filled" icon="delete" style="display: none;">删除</mdui-button>
+                <mdui-button id="batch-cancel" variant="tonal" icon="close" style="display: none;">取消</mdui-button>
                 <span id="selected-count" style="font-size: 14px; color: #666; display: none;">已选 0 项</span>
             </div>
             
             <!-- 搜索和标签筛选 -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
-                <input type="text" id="search-input" placeholder="搜索待办内容..." style="flex: 1; padding: 10px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none;">
-                <button onclick="clearFilters()" style="padding: 10px 20px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;"><i class="fas fa-times"></i> 清除</button>
+                <mdui-text-field id="search-input" placeholder="搜索待办内容..." style="flex: 1;"></mdui-text-field>
+                <mdui-button onclick="clearFilters()" variant="outlined" icon="close">清除</mdui-button>
             </div>
             <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
                 <span style="font-size: 14px; color: #666;">筛选标签:</span>
