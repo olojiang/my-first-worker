@@ -230,7 +230,7 @@ export function tagsPage() {
         <div class="input-section">
             <div class="input-group">
                 <input type="text" class="tag-input" id="tag-input" placeholder="输入新标签名称..." maxlength="20">
-                <mdui-button class="add-btn" id="add-btn" variant="filled">添加</mdui-button>
+                <mdui-button class="add-btn" id="add-btn" variant="filled" icon="add">添加</mdui-button>
             </div>
         </div>
         
