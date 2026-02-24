@@ -508,6 +508,7 @@ export async function todoPage(request, env) {
                         <span style="font-size: 14px; color: #666;">筛选:</span>
                         <mdui-button id="filter-all" class="filter-btn active" variant="filled" style="--mdui-comp-filled-button-container-height: 32px; font-size: 12px; padding: 0 12px;">全部</mdui-button>
                         <mdui-button id="filter-pending" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">未完成</mdui-button>
+                        <mdui-button id="filter-shared" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">共享给我</mdui-button>
                         <mdui-button id="filter-completed" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">已完成</mdui-button>
                     </div>
                     <p style="font-size: 12px; color: #999; margin-top: 10px; margin-bottom: 0;">默认显示：未完成任务 + 今天已完成的任务</p>
@@ -747,7 +748,7 @@ export async function todoPage(request, env) {
             
             // 绑定筛选按钮
             try {
-                ['filter-all', 'filter-pending', 'filter-completed'].forEach(id => {
+                ['filter-all', 'filter-pending', 'filter-shared', 'filter-completed'].forEach(id => {
                     const btn = document.getElementById(id);
                     if (btn) {
                         const filterType = id.replace('filter-', '');
@@ -1523,6 +1524,9 @@ export async function todoPage(request, env) {
                     if (isToday(todo.created_at)) return true; // 今天完成的也显示
                     return false;
                 });
+            } else if (currentFilter === 'shared') {
+                // 只显示共享给我的
+                filteredTodos = todos.filter(todo => todo.isShared);
             } else if (currentFilter === 'completed') {
                 // 只显示已完成的
                 filteredTodos = todos.filter(todo => todo.done);
