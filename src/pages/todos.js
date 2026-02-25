@@ -38,22 +38,10 @@ export async function todoPage(request, env) {
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>📋 TodoList</title>
-    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
-    <script>
-        // VConsole 初始化
-        window.onload = function() {
-            if (typeof VConsole !== 'undefined') {
-                window.vConsole = new VConsole();
-                console.log('[VConsole] 初始化成功');
-            } else {
-                console.error('[VConsole] 加载失败');
-            }
-        };
-    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -64,6 +52,12 @@ export async function todoPage(request, env) {
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            touch-action: pan-x pan-y;
+        }
+        
+        html, body {
+            touch-action: pan-x pan-y;
+            overscroll-behavior: none;
         }
         
         body {
@@ -93,6 +87,16 @@ export async function todoPage(request, env) {
             top: 0;
             z-index: 100;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .version-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            font-weight: 400;
+            letter-spacing: 0.5px;
         }
         
         .header h1 {
@@ -449,6 +453,7 @@ export async function todoPage(request, env) {
 <body>
     <div class="container">
         <div class="header">
+            <span class="version-badge">v0.0.1</span>
             <h1><i class="fas fa-clipboard-list"></i> TodoList</h1>
             <p>记录你的待办事项</p>
             ${userSection}
