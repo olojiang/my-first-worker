@@ -94,11 +94,16 @@ export async function apiTodos(request, env) {
         const myTodoIds = (myResult.results || []).map(t => t.id);
         let myTodoShares = [];
         if (myTodoIds.length > 0) {
-          const placeholders = myTodoIds.map(() => '?').join(',');
-          const sharesResult = await env.DB.prepare(
-            `SELECT todo_id, shared_with_id, shared_with_login FROM todo_shares WHERE todo_id IN (${placeholders})`
-          ).bind(...myTodoIds).all();
-          myTodoShares = sharesResult.results || [];
+          // 分批查询，每批最多 100 个，避免 SQL 变量过多
+          const BATCH_SIZE = 100;
+          for (let i = 0; i < myTodoIds.length; i += BATCH_SIZE) {
+            const batch = myTodoIds.slice(i, i + BATCH_SIZE);
+            const placeholders = batch.map(() => '?').join(',');
+            const sharesResult = await env.DB.prepare(
+              `SELECT todo_id, shared_with_id, shared_with_login FROM todo_shares WHERE todo_id IN (${placeholders})`
+            ).bind(...batch).all();
+            myTodoShares = myTodoShares.concat(sharesResult.results || []);
+          }
         }
 
         const myTodos = (myResult.results || []).map(todo => {
