@@ -42,9 +42,9 @@ export async function todoPage(request, env) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>📋 TodoList</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/fonts/fa-all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="/fonts/material-icons.css">
     <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
     <style>
         * {

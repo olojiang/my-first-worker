@@ -65,6 +65,24 @@ export default {
       return redirectShortUrl(path, env);
     }
     
+    // 字体文件路由 - 从 R2 提供
+    if (path.startsWith('/fonts/')) {
+      const fontPath = path.replace('/fonts/', '');
+      const object = await env.STORAGE.get(`fonts/${fontPath}`);
+      if (object) {
+        const headers = new Headers();
+        const ext = fontPath.split('.').pop();
+        const contentTypeMap = {
+          'woff2': 'font/woff2',
+          'css': 'text/css'
+        };
+        headers.set('Content-Type', contentTypeMap[ext] || object.httpMetadata.contentType || 'application/octet-stream');
+        headers.set('Cache-Control', 'public, max-age=31536000');
+        return new Response(object.body, { headers });
+      }
+      return notFound();
+    }
+    
     return notFound();
   },
 };
