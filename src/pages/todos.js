@@ -1,7 +1,7 @@
 import { getSession } from '../auth/session.js';
 
 // 版本号 - 每次部署时更新
-const VERSION = 'v0.0.3';
+const VERSION = 'v0.0.4';
 
 export async function todoPage(request, env) {
   // 获取登录状态
@@ -46,9 +46,9 @@ export async function todoPage(request, env) {
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>📋 TodoList</title>
     <link rel="stylesheet" href="/fonts/fa-all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
+    <link rel="stylesheet" href="/fonts/mdui@2.css">
     <link rel="stylesheet" href="/fonts/material-icons.css">
-    <script src="https://unpkg.com/mdui@2/mdui.global.js"></script>
+    <script src="/fonts/mdui.global.js"></script>
     <style>
         * {
             margin: 0;
