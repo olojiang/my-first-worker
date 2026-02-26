@@ -1,5 +1,8 @@
 import { getSession } from '../auth/session.js';
 
+// 版本号 - 每次部署时更新
+const VERSION = 'v0.0.2';
+
 export async function todoPage(request, env) {
   // 获取登录状态
   let user = null;
@@ -453,7 +456,7 @@ export async function todoPage(request, env) {
 <body>
     <div class="container">
         <div class="header">
-            <span class="version-badge">v0.0.1</span>
+            <span class="version-badge">${VERSION}</span>
             <h1><i class="fas fa-clipboard-list"></i> TodoList</h1>
             <p>记录你的待办事项</p>
             ${userSection}
