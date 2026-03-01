@@ -1902,17 +1902,21 @@ export async function todoPage(request, env) {
             }
         }
         
-        // 更新统计
-        function updateStats() {
-            const total = todos.length;
-            const completed = todos.filter(t => t.done).length;
-            const pending = total - completed;
-            const sharedToMe = todos.filter(t => t.isShared).length;
-            
-            document.getElementById('total-count').textContent = total;
-            document.getElementById('pending-count').textContent = pending;
-            document.getElementById('completed-count').textContent = completed;
-            document.getElementById('shared-count').textContent = sharedToMe;
+        // 更新统计（从服务端获取全量数据）
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/todos/stats');
+                const data = await response.json();
+                
+                if (data.success && data.stats) {
+                    document.getElementById('total-count').textContent = data.stats.total;
+                    document.getElementById('pending-count').textContent = data.stats.pending;
+                    document.getElementById('completed-count').textContent = data.stats.completed;
+                    document.getElementById('shared-count').textContent = data.stats.shared;
+                }
+            } catch (e) {
+                console.error('[updateStats] 获取统计失败:', e);
+            }
         }
         
         // 添加待办

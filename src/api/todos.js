@@ -207,6 +207,54 @@ export async function apiTodos(request, env) {
       });
     }
 
+    // GET /api/todos/stats - 获取待办统计（全量数据）
+    if (method === 'GET' && path === '/api/todos/stats') {
+      let stats = {
+        total: 0,
+        pending: 0,
+        completed: 0,
+        shared: 0
+      };
+
+      if (currentUser) {
+        // 1. 统计自己创建的 todo
+        const myStatsResult = await env.DB.prepare(`
+          SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN done = 0 THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN done = 1 THEN 1 ELSE 0 END) as completed
+          FROM todos 
+          WHERE user_login = ? OR (user_login IS NULL AND user_id = ?)
+        `).bind(currentUser.login, currentUser.id).all();
+
+        const myStats = myStatsResult.results?.[0];
+        if (myStats) {
+          stats.total += myStats.total || 0;
+          stats.pending += myStats.pending || 0;
+          stats.completed += myStats.completed || 0;
+        }
+
+        // 2. 统计共享给我的 todo
+        const sharedStatsResult = await env.DB.prepare(`
+          SELECT COUNT(*) as shared
+          FROM todos t
+          INNER JOIN todo_shares ts ON t.id = ts.todo_id
+          WHERE ts.shared_with_id = ? OR ts.shared_with_login = ?
+        `).bind(currentUser.id.toString(), currentUser.login).all();
+
+        const sharedStats = sharedStatsResult.results?.[0];
+        if (sharedStats) {
+          stats.shared = sharedStats.shared || 0;
+        }
+      }
+
+      return jsonResponse({
+        success: true,
+        stats: stats,
+        user: currentUser ? { id: currentUser.id, login: currentUser.login } : null
+      });
+    }
+
     // POST /api/todos - 创建待办
     if (method === 'POST' && path === '/api/todos') {
       const body = await request.json();
