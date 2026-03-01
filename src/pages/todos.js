@@ -489,6 +489,10 @@ export async function todoPage(request, env) {
                 <div class="stat-value" id="shared-count" style="color: #f59e0b;">0</div>
                 <div class="stat-label">共享给我</div>
             </div>
+            <div class="stat-item">
+                <div class="stat-value" id="shared-by-me-count" style="color: #8b5cf6;">0</div>
+                <div class="stat-label">我共享的</div>
+            </div>
         </div>
         
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: all 0.3s ease;">
@@ -525,6 +529,7 @@ export async function todoPage(request, env) {
                         <mdui-button id="filter-pending" class="filter-btn active" variant="filled" style="--mdui-comp-filled-button-container-height: 32px; font-size: 12px; padding: 0 12px;">未完成</mdui-button>
                         <mdui-button id="filter-completed" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">已完成</mdui-button>
                         <mdui-button id="filter-shared" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">共享给我</mdui-button>
+                        <mdui-button id="filter-shared-by-me" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">我共享的</mdui-button>
                         <mdui-button id="filter-all" class="filter-btn" variant="tonal" style="--mdui-comp-tonal-button-container-height: 32px; font-size: 12px; padding: 0 12px;">全部</mdui-button>
                     </div>
                 </div>
@@ -794,7 +799,7 @@ export async function todoPage(request, env) {
             
             // 绑定筛选按钮
             try {
-                ['filter-all', 'filter-pending', 'filter-shared', 'filter-completed'].forEach(id => {
+                ['filter-all', 'filter-pending', 'filter-shared', 'filter-completed', 'filter-shared-by-me'].forEach(id => {
                     const btn = document.getElementById(id);
                     if (btn) {
                         const filterType = id.replace('filter-', '');
@@ -1912,6 +1917,7 @@ export async function todoPage(request, env) {
                     document.getElementById('pending-count').textContent = data.stats.pending;
                     document.getElementById('completed-count').textContent = data.stats.completed;
                     document.getElementById('shared-count').textContent = data.stats.shared;
+                    document.getElementById('shared-by-me-count').textContent = data.stats.sharedByMe || 0;
                 }
             } catch (e) {
                 console.error('[updateStats] 获取统计失败:', e);

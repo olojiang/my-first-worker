@@ -132,6 +132,51 @@ export async function apiTodos(request, env) {
         });
       }
       
+      // 处理 shared-by-me 筛选（返回我共享给别人的 todo）
+      if (filter === 'shared-by-me') {
+        if (currentUser) {
+          // 获取我共享给别人的所有 todo
+          const sharedByMeResult = await env.DB.prepare(`
+            SELECT DISTINCT t.id, t.text, t.done, t.tags, t.attachments, t.created_at, t.user_id, t.user_login
+            FROM todos t
+            INNER JOIN todo_shares ts ON t.id = ts.todo_id
+            WHERE ts.owner_id = ?
+            ORDER BY t.done ASC, t.created_at DESC
+          `).bind(currentUser.id.toString()).all();
+
+          // 获取这些 todo 的共享信息
+          const sharedTodoIds = (sharedByMeResult.results || []).map(t => t.id);
+          let sharedTodoShares = [];
+          if (sharedTodoIds.length > 0) {
+            const placeholders = sharedTodoIds.map(() => '?').join(',');
+            const sharesResult = await env.DB.prepare(
+              `SELECT todo_id, shared_with_id, shared_with_login FROM todo_shares WHERE todo_id IN (${placeholders})`
+            ).bind(...sharedTodoIds).all();
+            sharedTodoShares = sharesResult.results || [];
+          }
+
+          const sharedByMeTodos = (sharedByMeResult.results || []).map(todo => {
+            const shares = sharedTodoShares.filter(s => s.todo_id === todo.id);
+            return {
+              ...todo,
+              tags: todo.tags ? JSON.parse(todo.tags) : [],
+              attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+              isSharedByMe: true,
+              shares: shares
+            };
+          });
+
+          todos = sharedByMeTodos;
+        }
+
+        return jsonResponse({
+          success: true,
+          todos: todos,
+          filter: filter,
+          user: currentUser ? { id: currentUser.id, login: currentUser.login } : null
+        });
+      }
+      
       // 构建 done 条件
       let doneCondition = '';
       let doneValue = null;
@@ -259,7 +304,8 @@ export async function apiTodos(request, env) {
         total: 0,
         pending: 0,
         completed: 0,
-        shared: 0
+        shared: 0,
+        sharedByMe: 0
       };
 
       if (currentUser) {
@@ -291,6 +337,19 @@ export async function apiTodos(request, env) {
         const sharedStats = sharedStatsResult.results?.[0];
         if (sharedStats) {
           stats.shared = sharedStats.shared || 0;
+        }
+
+        // 3. 统计我共享给别人的 todo
+        const sharedByMeResult = await env.DB.prepare(`
+          SELECT COUNT(DISTINCT t.id) as sharedByMe
+          FROM todos t
+          INNER JOIN todo_shares ts ON t.id = ts.todo_id
+          WHERE ts.owner_id = ?
+        `).bind(currentUser.id.toString()).all();
+
+        const sharedByMeStats = sharedByMeResult.results?.[0];
+        if (sharedByMeStats) {
+          stats.sharedByMe = sharedByMeStats.sharedByMe || 0;
         }
       }
 
