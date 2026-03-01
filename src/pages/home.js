@@ -28,6 +28,7 @@ export async function homePage(request, env) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <title>纪 Todo - 首页</title>
     <link rel="stylesheet" href="/fonts/fa-all.min.css">
     <!-- Eruda v3.4.3 -->
