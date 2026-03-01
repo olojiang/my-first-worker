@@ -1,5 +1,59 @@
 import { jsonResponse } from '../utils/response.js'
 
+// 通用 AI 助手 API
+export async function apiAIGeneral(request, env) {
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405);
+  }
+
+  try {
+    const body = await request.json();
+    const prompt = body.prompt?.trim();
+
+    if (!prompt) {
+      return jsonResponse({ success: false, error: 'Prompt 不能为空' }, 400);
+    }
+
+    const response = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
+      messages: [
+        {
+          role: 'system',
+          content: `你是一个专业的 AI 助手，可以回答各种问题、生成代码、提供建议等。
+
+能力范围：
+1. 回答技术问题、编程相关咨询
+2. 生成、优化、解释代码（支持多种编程语言）
+3. 提供算法思路和数据结构建议
+4. 帮助调试和排查错误
+5. 提供最佳实践和代码审查建议
+6. 回答一般性知识问题
+
+回答规则：
+1. 如果用户用中文提问，必须用中文回答
+2. 如果用户用英文提问，用英文回答
+3. 代码示例要完整、可运行，包含必要的注释
+4. 技术解释要清晰、准确、易懂
+5. 如果不确定，诚实说明，不要编造信息`
+        },
+        { role: 'user', content: prompt }
+      ]
+    });
+
+    return jsonResponse({
+      success: true,
+      prompt: prompt,
+      response: response.response,
+      model: 'llama-2-7b-chat'
+    });
+  } catch (e) {
+    return jsonResponse({
+      success: false,
+      error: 'AI 服务暂时不可用',
+      message: e.message
+    }, 500);
+  }
+}
+
 export async function apiAI(request, env) {
   const url = new URL(request.url);
   const prompt = url.searchParams.get('prompt') || '你好';

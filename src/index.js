@@ -3,7 +3,7 @@ import { getSession } from './auth/session.js';
 import { apiTodos } from './api/todos.js';
 import { apiTags } from './api/tags.js';
 import { apiUpload, apiAttachments } from './api/upload.js';
-import { apiAI, apiAIOptimize } from './api/ai.js';
+import { apiAI, apiAIOptimize, apiAIGeneral } from './api/ai.js';
 import { apiTime, apiWeather, apiCounter, counterPage, apiShorten, redirectShortUrl } from './api/demo.js';
 import { apiTestAll, apiKV, apiD1, apiR2, apiResources } from './api/storage.js';
 import { homePage } from './pages/home.js';
@@ -45,6 +45,7 @@ export default {
     // AI API 路由
     if (path === '/api/ai') return apiAI(request, env);
     if (path === '/api/ai/optimize') return apiAIOptimize(request, env);
+    if (path === '/api/ai/general') return apiAIGeneral(request, env);
     
     // Upload API 路由
     if (path === '/api/upload') return apiUpload(request, env);
