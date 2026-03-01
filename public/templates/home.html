@@ -2,6 +2,13 @@
 <html>
   <head><title>Home</title></head>
   <body>
+    <script src="/eruda-polyfill.js"></script>
+    <script src="/eruda.js"></script>
+    <script>
+      eruda.init({ plugins: ['monitor', 'timing', 'code', 'vue'] })
+      console.log('Eruda 已初始化！')
+    </script>
+
     <h1>Cloudflare Worker - Home</h1>
     <p>Welcome to the modularized worker.</p>
   </body>

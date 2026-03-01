@@ -2,6 +2,12 @@
 <html>
   <head><title>Todos</title></head>
   <body>
+    <script src="/eruda-polyfill.js"></script>
+    <script src="/eruda.js"></script>
+    <script>
+      eruda.init({ plugins: ['monitor', 'timing', 'code', 'vue'] })
+      console.log('Eruda 已初始化！')
+    </script>
     <h1>Todo List</h1>
     <div id="todos"></div>
   </body>

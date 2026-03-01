@@ -357,8 +357,8 @@ export async function apiTodos(request, env) {
       return jsonResponse({ success: true, message: '已取消共享' });
     }
     
-    // GET /api/todos/:id/shares - 获取待办的共享列表
-    if (method === 'GET' && path.match(/^\/api\/todos\/\d+\/shares$/)) {
+    // GET /api/todos/:id/shares - 获取待办的共享列表（也支持 /share 单数形式）
+    if (method === 'GET' && path.match(/^\/api\/todos\/\d+\/(shares?)$/)) {
       const id = parseInt(path.split('/')[3]);
       
       // 检查待办是否存在
