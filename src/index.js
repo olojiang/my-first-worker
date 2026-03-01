@@ -65,6 +65,18 @@ export default {
       return redirectShortUrl(path, env);
     }
     
+    // Eruda 文件路由 - 从 R2 提供
+    if (path === '/eruda.js' || path === '/eruda-polyfill.js') {
+      const object = await env.STORAGE.get(path.substring(1));
+      if (object) {
+        const headers = new Headers();
+        headers.set('Content-Type', 'application/javascript');
+        headers.set('Cache-Control', 'public, max-age=31536000');
+        return new Response(object.body, { headers });
+      }
+      return notFound();
+    }
+    
     // 字体文件路由 - 从 R2 提供
     if (path.startsWith('/fonts/')) {
       const fontPath = path.replace('/fonts/', '');
