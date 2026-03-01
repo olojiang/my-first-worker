@@ -79,16 +79,36 @@ export async function apiTodos(request, env) {
     }
 
     // GET /api/todos - 获取所有待办（包括自己创建的 + 共享给我的）
+    // 支持 filter 参数: all, pending(默认), completed
     if (method === 'GET' && path === '/api/todos') {
       let todos = [];
+      
+      // 获取过滤参数，默认 pending（未完成）
+      const filter = url.searchParams.get('filter') || 'pending';
+      
+      // 构建 done 条件
+      let doneCondition = '';
+      let doneValue = null;
+      if (filter === 'pending') {
+        doneCondition = 'AND done = 0';
+        doneValue = 0;
+      } else if (filter === 'completed') {
+        doneCondition = 'AND done = 1';
+        doneValue = 1;
+      }
+      // filter === 'all' 时不添加 done 条件
 
       if (currentUser) {
-        // 1. 获取自己创建的 todo
-        const myResult = await env.DB.prepare(
-          'SELECT * FROM todos WHERE user_login = ? OR (user_login IS NULL AND user_id = ?) ORDER BY created_at DESC'
-        )
-          .bind(currentUser.login, currentUser.id)
-          .all();
+        // 1. 获取自己创建的 todo（根据 filter 过滤）
+        const myQuery = `
+          SELECT * FROM todos 
+          WHERE (user_login = ? OR (user_login IS NULL AND user_id = ?)) 
+          ${doneCondition}
+          ORDER BY created_at DESC
+        `;
+        const myResult = doneValue !== null 
+          ? await env.DB.prepare(myQuery).bind(currentUser.login, currentUser.id, doneValue).all()
+          : await env.DB.prepare(myQuery).bind(currentUser.login, currentUser.id).all();
 
         // 获取自己创建的所有 todo 的共享信息
         const myTodoIds = (myResult.results || []).map(t => t.id);
@@ -118,14 +138,18 @@ export async function apiTodos(request, env) {
           };
         });
 
-        // 2. 获取共享给我的 todo
-        const sharedResult = await env.DB.prepare(`
+        // 2. 获取共享给我的 todo（根据 filter 过滤）
+        const sharedQuery = `
           SELECT t.id, t.text, t.done, t.tags, t.attachments, t.created_at, t.user_id, t.user_login, ts.owner_id as shared_by_id, ts.shared_with_login
           FROM todos t
           INNER JOIN todo_shares ts ON t.id = ts.todo_id
-          WHERE ts.shared_with_id = ? OR ts.shared_with_login = ?
+          WHERE (ts.shared_with_id = ? OR ts.shared_with_login = ?)
+          ${doneCondition}
           ORDER BY t.created_at DESC
-        `).bind(currentUser.id.toString(), currentUser.login).all();
+        `;
+        const sharedResult = doneValue !== null
+          ? await env.DB.prepare(sharedQuery).bind(currentUser.id.toString(), currentUser.login, doneValue).all()
+          : await env.DB.prepare(sharedQuery).bind(currentUser.id.toString(), currentUser.login).all();
 
         // 获取共享 todo 的共享信息
         const sharedTodoIds = (sharedResult.results || []).map(t => t.id);
@@ -156,6 +180,7 @@ export async function apiTodos(request, env) {
       return jsonResponse({
         success: true,
         todos: todos,
+        filter: filter,
         user: currentUser ? { id: currentUser.id, login: currentUser.login } : null
       });
     }

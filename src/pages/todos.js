@@ -1332,7 +1332,8 @@ export async function todoPage(request, env) {
             const activeBtn = document.getElementById('filter-' + filter);
             activeBtn.setAttribute('variant', 'filled');
             
-            renderTodos();
+            // 重新加载数据（服务端过滤）
+            loadTodos();
         }
         
         // 检查是否是今天创建的
@@ -1523,9 +1524,13 @@ export async function todoPage(request, env) {
             console.log('[loadTodos] 当前 todos 长度:', todos.length);
             
             try {
-                console.log('[loadTodos] 发起 fetch 请求: /api/todos');
+                // 构建 URL，添加 filter 参数
+                const url = new URL('/api/todos', window.location.origin);
+                url.searchParams.set('filter', currentFilter);
+                
+                console.log('[loadTodos] 发起 fetch 请求:', url.toString());
                 const startTime = Date.now();
-                const response = await fetch('/api/todos');
+                const response = await fetch(url);
                 const endTime = Date.now();
                 console.log('[loadTodos] 请求耗时:', endTime - startTime, 'ms');
                 console.log('[loadTodos] 响应状态:', response.status, response.statusText);
@@ -1561,24 +1566,8 @@ export async function todoPage(request, env) {
         function renderTodos() {
             const listEl = document.getElementById('todo-list');
             
-            // 筛选待办
+            // 服务端已经过滤，只需要处理标签和搜索筛选
             let filteredTodos = todos;
-            
-            if (currentFilter === 'pending') {
-                // 显示未完成的 + 今天已完成的
-                filteredTodos = todos.filter(todo => {
-                    if (!todo.done) return true; // 未完成的都显示
-                    if (isToday(todo.created_at)) return true; // 今天完成的也显示
-                    return false;
-                });
-            } else if (currentFilter === 'shared') {
-                // 只显示共享给我的
-                filteredTodos = todos.filter(todo => todo.isShared);
-            } else if (currentFilter === 'completed') {
-                // 只显示已完成的
-                filteredTodos = todos.filter(todo => todo.done);
-            }
-            // 'all' 显示全部
             
             // 标签筛选
             if (filterTags.length > 0) {
