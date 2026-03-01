@@ -1,7 +1,7 @@
 import { getSession } from '../auth/session.js';
 
 // 版本号 - 每次部署时更新
-const VERSION = 'v## 当前版本.## 当前版本.';
+const VERSION = 'v1.0.0';
 
 export async function todoPage(request, env) {
   // 获取登录状态
@@ -49,6 +49,13 @@ export async function todoPage(request, env) {
     <link rel="stylesheet" href="/fonts/mdui@2.css">
     <link rel="stylesheet" href="/fonts/material-icons.css">
     <script src="/fonts/mdui.global.js"></script>
+    <!-- Eruda v3.4.3 -->
+    <script src="/eruda-polyfill.js"></script>
+    <script src="/eruda.js"></script>
+    <script>
+      eruda.init({ plugins: ['monitor', 'timing', 'code', 'vue'] })
+      console.log('Eruda v3.4.3 已初始化！')
+    </script>
     <style>
         * {
             margin: 0;

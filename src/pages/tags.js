@@ -9,6 +9,13 @@ export function tagsPage() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>🏷️ 标签管理</title>
     <link rel="stylesheet" href="/fonts/fa-all.min.css">
+    <!-- Eruda v3.4.3 -->
+    <script src="/eruda-polyfill.js"></script>
+    <script src="/eruda.js"></script>
+    <script>
+      eruda.init({ plugins: ['monitor', 'timing', 'code', 'vue'] })
+      console.log('Eruda v3.4.3 已初始化！')
+    </script>
     <style>
         * {
             margin: 0;

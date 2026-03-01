@@ -30,6 +30,13 @@ export async function homePage(request, env) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Cloudflare Worker 功能演示中心</title>
     <link rel="stylesheet" href="/fonts/fa-all.min.css">
+    <!-- Eruda v3.4.3 -->
+    <script src="/eruda-polyfill.js"></script>
+    <script src="/eruda.js"></script>
+    <script>
+      eruda.init({ plugins: ['monitor', 'timing', 'code', 'vue'] })
+      console.log('Eruda v3.4.3 已初始化！')
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
