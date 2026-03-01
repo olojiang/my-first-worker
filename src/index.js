@@ -96,6 +96,18 @@ export default {
       return notFound();
     }
     
+    // Favicon 路由
+    if (path === '/favicon.svg') {
+      const object = await env.STORAGE.get('favicon.svg');
+      if (object) {
+        const headers = new Headers();
+        headers.set('Content-Type', 'image/svg+xml');
+        headers.set('Cache-Control', 'public, max-age=31536000');
+        return new Response(object.body, { headers });
+      }
+      return notFound();
+    }
+    
     return notFound();
   },
 };
