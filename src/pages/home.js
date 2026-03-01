@@ -28,7 +28,7 @@ export async function homePage(request, env) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Cloudflare Worker 功能演示中心</title>
+    <title>纪 Todo - 首页</title>
     <link rel="stylesheet" href="/fonts/fa-all.min.css">
     <!-- Eruda v3.4.3 -->
     <script src="/eruda-polyfill.js"></script>
@@ -173,7 +173,7 @@ export async function homePage(request, env) {
 </head>
 <body>
     <div class="header">
-        <h1>☁️ Cloudflare Worker 功能演示中心</h1>
+        <h1>☁️ 纪 Todo</h1>
         <p>体验 Workers、KV、D1、R2、AI 等强大功能</p>
         <div style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%);">
             ${userSection}

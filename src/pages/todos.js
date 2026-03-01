@@ -45,7 +45,7 @@ export async function todoPage(request, env) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>📋 TodoList</title>
+    <title>📋 纪 Todo</title>
     <link rel="stylesheet" href="/fonts/fa-all.min.css">
     <link rel="stylesheet" href="/fonts/mdui@2.css">
     <link rel="stylesheet" href="/fonts/material-icons.css">
@@ -465,7 +465,7 @@ export async function todoPage(request, env) {
     <div class="container">
         <div class="header">
             <span class="version-badge">${VERSION}</span>
-            <h1><i class="fas fa-clipboard-list"></i> TodoList</h1>
+            <h1><i class="fas fa-clipboard-list"></i> 纪 Todo</h1>
             <p>记录你的待办事项</p>
             ${userSection}
             <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
