@@ -1,7 +1,8 @@
 import { getSession } from '../auth/session.js';
+import { VERSION_DISPLAY } from '../version.js';
 
-// 版本号 - 每次部署时更新
-const VERSION = 'v1.0.0';
+// 版本号 - 每次部署时自动更新
+const VERSION = VERSION_DISPLAY;
 
 export async function todoPage(request, env) {
   // 获取登录状态

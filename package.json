@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "echo Building... && true"
+    "build": "echo Building... && true",
+    "bump": "node scripts/bump-version.js"
   },
   "dependencies": {}
 }
