@@ -1,14 +1,16 @@
 <!doctype html>
 <html>
-  <head><title>Home</title></head>
-  <body>
+  <head>
+    <title>Home</title>
+    <!-- Eruda 调试工具 -->
     <script src="/eruda-polyfill.js"></script>
     <script src="/eruda.js"></script>
     <script>
       eruda.init({ plugins: ['monitor', 'timing', 'code', 'vue'] })
       console.log('Eruda 已初始化！')
     </script>
-
+  </head>
+  <body>
     <h1>Cloudflare Worker - Home</h1>
     <p>Welcome to the modularized worker.</p>
   </body>
