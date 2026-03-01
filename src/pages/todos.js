@@ -1,7 +1,7 @@
 import { getSession } from '../auth/session.js';
 
 // 版本号 - 每次部署时更新
-const VERSION = 'v0.0.4';
+const VERSION = 'v## 当前版本.## 当前版本.';
 
 export async function todoPage(request, env) {
   // 获取登录状态
@@ -578,6 +578,30 @@ export async function todoPage(request, env) {
         let currentAttachments = []; // 当前待添加的附件列表
         let shareWithUsers = []; // 待共享的用户列表
         
+        // 从 localStorage 加载共享用户列表
+        function loadShareUsersFromStorage() {
+            try {
+                const saved = localStorage.getItem('todo_share_users');
+                if (saved) {
+                    shareWithUsers = JSON.parse(saved);
+                    console.log('[共享用户] 从 localStorage 加载:', shareWithUsers);
+                }
+            } catch (e) {
+                console.error('[共享用户] 加载失败:', e);
+                shareWithUsers = [];
+            }
+        }
+        
+        // 保存共享用户列表到 localStorage
+        function saveShareUsersToStorage() {
+            try {
+                localStorage.setItem('todo_share_users', JSON.stringify(shareWithUsers));
+                console.log('[共享用户] 保存到 localStorage:', shareWithUsers);
+            } catch (e) {
+                console.error('[共享用户] 保存失败:', e);
+            }
+        }
+        
         // 渲染共享用户列表
         function renderShareList() {
             const shareListEl = document.getElementById('share-list');
@@ -613,6 +637,7 @@ export async function todoPage(request, env) {
             }
             
             shareWithUsers.push(username);
+            saveShareUsersToStorage(); // 保存到 localStorage
             input.value = '';
             renderShareList();
         }
@@ -620,12 +645,14 @@ export async function todoPage(request, env) {
         // 移除共享用户
         window.removeShareUser = function(index) {
             shareWithUsers.splice(index, 1);
+            saveShareUsersToStorage(); // 保存到 localStorage
             renderShareList();
         }
         
         // 清空共享用户列表
         function clearShareUsers() {
             shareWithUsers = [];
+            saveShareUsersToStorage(); // 保存到 localStorage
             renderShareList();
         }
         
@@ -633,6 +660,10 @@ export async function todoPage(request, env) {
         document.addEventListener('DOMContentLoaded', () => {
             console.log('[初始化] DOMContentLoaded 事件触发');
             console.log('[初始化] 当前时间:', new Date().toISOString());
+            
+            // 从 localStorage 加载共享用户列表
+            loadShareUsersFromStorage();
+            renderShareList();
             
             // 检查关键元素是否存在
             const todoListEl = document.getElementById('todo-list');
@@ -1969,19 +2000,34 @@ export async function todoPage(request, env) {
                 
                 if (data.success) {
                     // 如果有共享用户，逐个共享
+                    let shareSuccessCount = 0;
+                    let shareFailCount = 0;
                     if (shareWithUsers.length > 0) {
                         for (const username of shareWithUsers) {
                             try {
-                                await fetch('/api/todos/' + data.todo.id + '/share', {
+                                const shareResponse = await fetch('/api/todos/' + data.todo.id + '/share', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ shared_with_login: username })
                                 });
+                                const shareData = await shareResponse.json();
+                                if (shareData.success) {
+                                    shareSuccessCount++;
+                                    console.log('[共享成功]', username);
+                                } else {
+                                    shareFailCount++;
+                                    console.error('[共享失败]', username, shareData.error);
+                                }
                             } catch (shareErr) {
-                                console.error('共享失败:', username, shareErr);
+                                shareFailCount++;
+                                console.error('[共享失败]', username, shareErr);
                             }
                         }
-                        showToast('添加成功！已共享给 ' + shareWithUsers.length + ' 位用户');
+                        if (shareFailCount > 0) {
+                            showToast('添加成功！共享成功 ' + shareSuccessCount + ' 位，失败 ' + shareFailCount + ' 位', 'error');
+                        } else {
+                            showToast('添加成功！已共享给 ' + shareSuccessCount + ' 位用户');
+                        }
                     } else {
                         showToast('添加成功！');
                     }
@@ -1989,8 +2035,9 @@ export async function todoPage(request, env) {
                     input.value = '';
                     selectedTags = [];
                     currentAttachments = []; // 清空附件列表
-                    shareWithUsers = []; // 清空共享用户列表
-                    clearShareUsers();
+                    // 不再清空共享用户列表，保留到 localStorage
+                    // shareWithUsers = []; 
+                    // clearShareUsers();
                     renderAttachments();
                     renderTagSelect();
                     todos.unshift(data.todo);
