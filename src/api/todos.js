@@ -79,12 +79,58 @@ export async function apiTodos(request, env) {
     }
 
     // GET /api/todos - 获取所有待办（包括自己创建的 + 共享给我的）
-    // 支持 filter 参数: all, pending(默认), completed
+    // 支持 filter 参数: all, pending(默认), completed, shared
     if (method === 'GET' && path === '/api/todos') {
       let todos = [];
       
       // 获取过滤参数，默认 pending（未完成）
       const filter = url.searchParams.get('filter') || 'pending';
+      
+      // 处理 shared 筛选（只返回共享给我的，不分完成状态）
+      if (filter === 'shared') {
+        if (currentUser) {
+          // 获取所有共享给我的 todo（不分完成状态，按完成状态分组排序）
+          const sharedResult = await env.DB.prepare(`
+            SELECT t.id, t.text, t.done, t.tags, t.attachments, t.created_at, t.user_id, t.user_login, ts.owner_id as shared_by_id, ts.shared_with_login
+            FROM todos t
+            INNER JOIN todo_shares ts ON t.id = ts.todo_id
+            WHERE ts.shared_with_id = ? OR ts.shared_with_login = ?
+            ORDER BY t.done ASC, t.created_at DESC
+          `).bind(currentUser.id.toString(), currentUser.login).all();
+
+          // 获取共享 todo 的共享信息
+          const sharedTodoIds = (sharedResult.results || []).map(t => t.id);
+          let sharedTodoShares = [];
+          if (sharedTodoIds.length > 0) {
+            const placeholders = sharedTodoIds.map(() => '?').join(',');
+            const sharesResult = await env.DB.prepare(
+              `SELECT todo_id, shared_with_id, shared_with_login FROM todo_shares WHERE todo_id IN (${placeholders})`
+            ).bind(...sharedTodoIds).all();
+            sharedTodoShares = sharesResult.results || [];
+          }
+
+          const sharedTodos = (sharedResult.results || []).map(todo => {
+            const shares = sharedTodoShares.filter(s => s.todo_id === todo.id);
+            return {
+              ...todo,
+              tags: todo.tags ? JSON.parse(todo.tags) : [],
+              attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+              isShared: true,
+              sharedBy: todo.shared_by_id,
+              shares: shares
+            };
+          });
+
+          todos = sharedTodos;
+        }
+
+        return jsonResponse({
+          success: true,
+          todos: todos,
+          filter: filter,
+          user: currentUser ? { id: currentUser.id, login: currentUser.login } : null
+        });
+      }
       
       // 构建 done 条件
       let doneCondition = '';
