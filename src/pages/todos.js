@@ -118,7 +118,8 @@ export async function todoPage(request, env) {
         }
 
         .header.collapsed .header-toggle-btn {
-            top: 50%;
+            top: auto;
+            bottom: -10px;
         }
 
         .header-toggle-btn {
@@ -169,6 +170,40 @@ export async function todoPage(request, env) {
             pointer-events: none;
         }
 
+        .header-tag-btn {
+            position: absolute;
+            right: 20px;
+            top: 30%;
+            transform: translateY(-50%);
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .header.collapsed .header-tag-btn {
+            top: 50%;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .header-info-btn {
+            position: absolute;
+            left: 20px;
+            top: 30%;
+            transform: translateY(-50%);
+            color: white;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .header.collapsed .header-info-btn {
+            top: 50%;
+        }
+
         .header h1 {
             font-size: 28px;
             margin-bottom: 8px;
@@ -194,8 +229,15 @@ export async function todoPage(request, env) {
         @media (min-width: 768px) {
             .stats {
                 position: sticky;
-                top: 195px;
                 z-index: 100;
+            }
+            /* 展开状态: header 高度约 195px */
+            .header:not(.collapsed) + .stats {
+                top: 195px;
+            }
+            /* 收起状态: header 高度约 60px */
+            .header.collapsed + .stats {
+                top: 60px;
             }
         }
 
@@ -658,8 +700,8 @@ export async function todoPage(request, env) {
             <h1><i class="fas fa-clipboard-list"></i> 纪 Todo</h1>
             <p>只有你能为自己设定方向、采取行动、应对不确定性</p>
             <div class="header-user-section">${userSection}</div>
-            <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
-            <mdui-button-icon onclick="showResourceInfo()" icon="info" style="position: absolute; left: 20px; top: 30%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.2);"></mdui-button-icon>
+            <a href="/tags" class="header-tag-btn"><i class="fas fa-tags"></i> 标签管理</a>
+            <mdui-button-icon onclick="showResourceInfo()" icon="info" class="header-info-btn"></mdui-button-icon>
             <button class="header-toggle-btn" id="header-toggle-btn" onclick="toggleHeaderCollapse()" title="收起/展开">
                 <i class="fas fa-chevron-up"></i>
             </button>
