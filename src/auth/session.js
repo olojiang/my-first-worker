@@ -16,7 +16,7 @@ export async function getSession(env, request) {
   return { sessionId, data };
 }
 
-export async function setSession(env, sessionId, data, expiresInSeconds = 86400) {
+export async function setSession(env, sessionId, data, expiresInSeconds = 2592000) {
   await env.CACHE.put(`oauth_session:${sessionId}`, JSON.stringify(data), {
     expirationTtl: expiresInSeconds,
   });

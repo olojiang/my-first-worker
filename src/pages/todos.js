@@ -13,7 +13,7 @@ export async function todoPage(request, env) {
       user = session.data.user;
     }
   }
-  
+
   // 用户登录区域
   const userSection = user ? `
     <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
@@ -32,9 +32,6 @@ export async function todoPage(request, env) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
         GitHub 登录
       </a>
-      <mdui-button onclick="exportTodos()" variant="text" style="color: white; --mdui-comp-text-button-container-height: 40px;">
-        <mdui-icon name="download"></mdui-icon> 导出数据
-      </mdui-button>
     </div>
   `;
   return new Response(`
@@ -66,12 +63,12 @@ export async function todoPage(request, env) {
             -webkit-tap-highlight-color: transparent;
             touch-action: pan-x pan-y;
         }
-        
+
         html, body {
             touch-action: pan-x pan-y;
             overscroll-behavior: none;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
@@ -79,16 +76,16 @@ export async function todoPage(request, env) {
             padding: 0;
             color: #333;
         }
-        
+
         .container {
-            
+
             margin: 0 auto;
             padding: 20px;
             min-height: 100vh;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
         }
-        
+
         .header {
             text-align: center;
             padding: 30px 20px;
@@ -99,8 +96,63 @@ export async function todoPage(request, env) {
             top: 0;
             z-index: 100;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
         }
-        
+
+        .header.collapsed {
+            padding: 12px 20px;
+        }
+
+        .header.collapsed h1 {
+            font-size: 18px;
+            margin-bottom: 0;
+        }
+
+        .header.collapsed p {
+            display: none;
+        }
+
+        .header.collapsed .header-user-section {
+            display: none;
+        }
+
+        .header.collapsed .header-toggle-btn {
+            top: 50%;
+        }
+
+        .header-toggle-btn {
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 20px;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            transition: all 0.3s ease;
+            z-index: 101;
+        }
+
+        .header-toggle-btn:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        .header-toggle-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .header.collapsed .header-toggle-btn i {
+            transform: rotate(180deg);
+        }
+
         .version-badge {
             position: absolute;
             top: 10px;
@@ -109,19 +161,25 @@ export async function todoPage(request, env) {
             color: rgba(255,255,255,0.6);
             font-weight: 400;
             letter-spacing: 0.5px;
+            transition: opacity 0.3s ease;
         }
-        
+
+        .header.collapsed .version-badge {
+            opacity: 0;
+            pointer-events: none;
+        }
+
         .header h1 {
             font-size: 28px;
             margin-bottom: 8px;
             font-weight: 700;
         }
-        
+
         .header p {
             opacity: 0.9;
             font-size: 14px;
         }
-        
+
         .stats {
             display: flex;
             justify-content: space-around;
@@ -131,23 +189,32 @@ export async function todoPage(request, env) {
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        
+
+        /* PC 屏幕上固定 stats 区域 */
+        @media (min-width: 768px) {
+            .stats {
+                position: sticky;
+                top: 195px;
+                z-index: 100;
+            }
+        }
+
         .stat-item {
             text-align: center;
         }
-        
+
         .stat-value {
             font-size: 24px;
             font-weight: 700;
             color: #ff6b6b;
         }
-        
+
         .stat-label {
             font-size: 12px;
             color: #999;
             margin-top: 4px;
         }
-        
+
         .input-section {
             background: white;
             border-radius: 16px;
@@ -155,12 +222,12 @@ export async function todoPage(request, env) {
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        
+
         .input-group {
             display: flex;
             gap: 10px;
         }
-        
+
         .todo-input {
             flex: 1;
             padding: 15px 20px;
@@ -170,12 +237,52 @@ export async function todoPage(request, env) {
             outline: none;
             transition: all 0.3s;
         }
-        
+
         .todo-input:focus {
             border-color: #ff6b6b;
             box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
         }
-        
+
+        /* 可调整大小的文本域容器 */
+        .resizable-textarea-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .resizable-textarea-wrapper .todo-input {
+            width: 100%;
+            min-height: 80px;
+            resize: none;
+            padding-bottom: 20px;
+        }
+
+        /* 拖拽手柄 */
+        .resize-handle {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 16px;
+            height: 16px;
+            cursor: ns-resize;
+            background: linear-gradient(135deg, transparent 40%, #ccc 40%, #ccc 45%, transparent 45%,
+                                        transparent 55%, #ccc 55%, #ccc 60%, transparent 60%);
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+
+        .resize-handle:hover {
+            opacity: 1;
+            background: linear-gradient(135deg, transparent 40%, #ff6b6b 40%, #ff6b6b 45%, transparent 45%,
+                                        transparent 55%, #ff6b6b 55%, #ff6b6b 60%, transparent 60%);
+        }
+
+        .resize-handle.dragging {
+            opacity: 1;
+            background: linear-gradient(135deg, transparent 40%, #ff6b6b 40%, #ff6b6b 45%, transparent 45%,
+                                        transparent 55%, #ff6b6b 55%, #ff6b6b 60%, transparent 60%);
+        }
+
         .add-btn {
             padding: 15px 25px;
             background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
@@ -188,16 +295,16 @@ export async function todoPage(request, env) {
             transition: all 0.3s;
             white-space: nowrap;
         }
-        
+
         .add-btn:active {
             transform: scale(0.95);
         }
-        
+
         .add-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        
+
         .todo-list {
             background: white;
             border-radius: 16px;
@@ -205,7 +312,31 @@ export async function todoPage(request, env) {
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             min-height: 200px;
         }
-        
+
+        /* 宽屏幕多栏布局 */
+        .todo-items-container {
+            display: grid;
+            gap: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .todo-items-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .todo-items-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .todo-items-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
         .todo-list h2 {
             font-size: 18px;
             margin-bottom: 15px;
@@ -214,36 +345,47 @@ export async function todoPage(request, env) {
             align-items: center;
             gap: 8px;
         }
-        
+
         .todo-item {
             padding: 15px;
             background: #f8f9fa;
             border-radius: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 0;
             transition: all 0.3s;
             animation: slideIn 0.3s ease;
             position: relative;
             width: 100%;
             box-sizing: border-box;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        
+
         .todo-item::after {
             content: '';
             display: table;
             clear: both;
         }
-        
+
         .todo-checkbox {
             float: left;
             margin-right: 15px;
             margin-top: 2px;
         }
-        
+
+        /* H5 状态下 checkbox 在 todo-content 内部，使用 inline-block */
+        .todo-content .todo-checkbox {
+            float: none;
+            display: inline-block;
+            margin-right: 12px;
+            margin-top: 0;
+            vertical-align: top;
+        }
+
         .todo-content {
             overflow: hidden;
         }
-        
+
         .todo-actions {
             float: right;
             display: none;
@@ -257,32 +399,32 @@ export async function todoPage(request, env) {
             margin-left: 10px;
             justify-content: center;
         }
-        
+
         .todo-item:hover .todo-actions {
             display: flex;
             opacity: 1;
         }
-        
+
         @media (max-width: 480px) {
             .todo-item:hover .todo-actions {
                 display: none;
                 opacity: 0;
             }
-            
+
             .todo-item.selected .todo-actions {
                 display: flex;
                 opacity: 1;
             }
-            
+
             .todo-item {
                 min-height: auto;
                 height: auto;
             }
-            
+
             .todo-att-item:hover {
                 background: #f0f0f0 !important;
             }
-            
+
             .todo-actions {
                 float: none;
                 display: none;
@@ -294,7 +436,7 @@ export async function todoPage(request, env) {
                 max-width: 99%;
             }
         }
-        
+
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -305,21 +447,21 @@ export async function todoPage(request, env) {
                 transform: translateX(0);
             }
         }
-        
+
         .todo-item:hover {
             background: #f0f0f0;
             transform: translateX(5px);
         }
-        
+
         .todo-item.completed {
             opacity: 0.6;
         }
-        
+
         .todo-item.completed .todo-text {
             text-decoration: line-through;
             color: #999;
         }
-        
+
         .checkbox {
             width: 24px;
             height: 24px;
@@ -327,66 +469,98 @@ export async function todoPage(request, env) {
             border-radius: 50%;
             margin-right: 15px;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s;
             flex-shrink: 0;
             margin-top: 2px;
+            position: relative;
+            background: white;
         }
-        
+
+        .checkbox[data-loading="true"] {
+            border-color: #ccc;
+            background: #f5f5f5;
+            cursor: wait;
+        }
+
+        .checkbox[data-loading="true"]::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid #ff6b6b;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -8px;
+            margin-left: -8px;
+        }
+
         .checkbox.checked {
             background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
             border-color: transparent;
         }
-        
+
         .checkbox.checked::after {
             content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
             color: white;
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 12px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
-        
+
         .todo-content {
             flex: 1;
             min-width: 0;
         }
-        
+
         .todo-text {
             font-size: 16px;
             color: #333;
             word-break: break-word;
             line-height: 1.4;
+            white-space: pre-wrap;
+            display: inline-block;
+            vertical-align: top;
+            max-width: calc(100% - 40px);
         }
-        
+
         .todo-time {
             font-size: 12px;
             color: #999;
             margin-top: 4px;
         }
-        
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
             color: #999;
         }
-        
+
         .empty-state-icon {
             font-size: 64px;
             margin-bottom: 20px;
             opacity: 0.5;
         }
-        
+
         .empty-state-text {
             font-size: 16px;
         }
-        
+
         .loading {
             text-align: center;
             padding: 40px;
             color: #ff6b6b;
         }
-        
+
         .loading-spinner {
             display: inline-block;
             width: 40px;
@@ -396,12 +570,12 @@ export async function todoPage(request, env) {
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
+
         .toast {
             position: fixed;
             bottom: 30px;
@@ -416,46 +590,61 @@ export async function todoPage(request, env) {
             opacity: 0;
             transition: all 0.3s;
         }
-        
+
         .toast.show {
             transform: translateX(-50%) translateY(0);
             opacity: 1;
         }
-        
+
         .toast.success {
             background: #4ade80;
         }
-        
+
         .toast.error {
             background: #ff6b6b;
         }
-        
+
+        /* 宽屏幕布局：filter-section 和 input-section 左右并排 */
+        @media (min-width: 992px) {
+            .main-content {
+                display: flex;
+                gap: 20px;
+                margin-bottom: 20px;
+            }
+
+            .main-content .filter-section,
+            .main-content .input-section {
+                flex: 1;
+                margin-bottom: 0;
+            }
+        }
+
         @media (max-width: 480px) {
             .container {
                 padding: 15px;
             }
-            
+
             .header {
                 padding: 20px 15px;
                 margin: -15px -15px 15px -15px;
             }
-            
+
             .header h1 {
                 font-size: 24px;
             }
-            
+
             .input-group {
                 flex-direction: column;
             }
-            
+
             .add-btn {
                 width: 100%;
             }
-            
+
             .todo-item {
                 padding: 12px;
             }
-            
+
             .todo-text {
                 font-size: 15px;
             }
@@ -464,15 +653,18 @@ export async function todoPage(request, env) {
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="header" id="main-header">
             <span class="version-badge">${VERSION}</span>
             <h1><i class="fas fa-clipboard-list"></i> 纪 Todo</h1>
-            <p>记录你的待办事项</p>
-            ${userSection}
+            <p>只有你能为自己设定方向、采取行动、应对不确定性</p>
+            <div class="header-user-section">${userSection}</div>
             <a href="/tags" style="position: absolute; right: 20px; top: 30%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;"><i class="fas fa-tags"></i> 标签管理</a>
             <mdui-button-icon onclick="showResourceInfo()" icon="info" style="position: absolute; left: 20px; top: 30%; transform: translateY(-50%); color: white; background: rgba(255,255,255,0.2);"></mdui-button-icon>
+            <button class="header-toggle-btn" id="header-toggle-btn" onclick="toggleHeaderCollapse()" title="收起/展开">
+                <i class="fas fa-chevron-up"></i>
+            </button>
         </div>
-        
+
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-value" id="total-count">0</div>
@@ -495,12 +687,14 @@ export async function todoPage(request, env) {
                 <div class="stat-label">我共享的</div>
             </div>
         </div>
-        
+
+        ${user ? `
+        <div class="main-content">
         <div class="filter-section" style="background: white; border-radius: 16px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: all 0.3s ease;">
             <!-- 顶部按钮行：筛选 | 多选 -->
             <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
                 <mdui-button id="toggle-filter-panel" variant="tonal" icon="filter_list">筛选</mdui-button>
-                
+
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <mdui-button id="toggle-multi-select" variant="tonal" icon="check_box">多选</mdui-button>
                     <mdui-button id="batch-complete" variant="filled" icon="check" style="display: none; transition: all 0.3s ease;">完成</mdui-button>
@@ -508,7 +702,7 @@ export async function todoPage(request, env) {
                     <span id="selected-count" style="font-size: 14px; color: #666; display: none; transition: all 0.3s ease;">已选 0 项</span>
                 </div>
             </div>
-            
+
             <!-- 筛选面板（默认隐藏） -->
             <div id="filter-panel" style="max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease;">
                 <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0;">
@@ -517,13 +711,13 @@ export async function todoPage(request, env) {
                         <mdui-text-field id="search-input" placeholder="搜索待办内容..." style="flex: 1;" oninput="toggleClearButton()"></mdui-text-field>
                         <mdui-button id="clear-btn" onclick="clearFilters()" variant="outlined" icon="close" style="display: none;">清除</mdui-button>
                     </div>
-                    
+
                     <!-- 标签筛选 -->
                     <div id="filter-tags" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
                         <span style="font-size: 14px; color: #666;">筛选标签:</span>
                         <span style="font-size: 12px; color: #999;">加载中...</span>
                     </div>
-                    
+
                     <!-- 状态筛选 -->
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <span style="font-size: 14px; color: #666;">筛选:</span>
@@ -536,10 +730,13 @@ export async function todoPage(request, env) {
                 </div>
             </div>
         </div>
-        
+
         <div class="input-section">
             <div class="input-group" style="flex-direction: column;">
-                <textarea class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="500" style="min-height: 80px; resize: vertical; font-family: inherit;"></textarea>
+                <div class="resizable-textarea-wrapper" style="position: relative;">
+                    <textarea class="todo-input" id="todo-input" placeholder="添加新的待办事项..." maxlength="500" style="min-height: 80px; resize: none; font-family: inherit; width: 100%;"></textarea>
+                    <div class="resize-handle" id="resize-handle" title="拖拽调整高度"></div>
+                </div>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <mdui-button id="add-btn" variant="filled" style="flex: 1;">添加</mdui-button>
                     <mdui-button id="ai-optimize-btn" variant="tonal" icon="auto_fix_normal" style="flex: 1;">AI 优化</mdui-button>
@@ -564,33 +761,134 @@ export async function todoPage(request, env) {
             </div>
             <div id="share-list" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
         </div>
-        
+        </div>
+        ` : ''}
+
         <div class="todo-list" id="todo-list">
-            <div class="loading">
-                <div class="loading-spinner"></div>
-                <p style="margin-top: 15px;">加载中...</p>
-            </div>
+            ${user ? '<div class="loading"><div class="loading-spinner"></div><p style="margin-top: 15px;">加载中...</p></div>' : '<div class="empty-state"><div class="empty-state-icon">🔒</div><div class="empty-state-text">请先登录后查看待办事项</div></div>'}
         </div>
     </div>
-    
+
     <div class="toast" id="toast"></div>
-    
+
     <!-- 刷新按钮 -->
     <button id="refresh-btn" onclick="location.reload()" style="position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
         <i class="fas fa-sync-alt"></i>
     </button>
-    
+
     <script>
         let todos = [];
         let selectedTags = [];
         let allTags = [];
         let filterTags = []; // 筛选用的标签
+        let tagFilterMode = 'or'; // 标签筛选模式: 'or' (或) 或 'and' (与)
         let searchKeyword = ''; // 搜索关键词
         let selectedTodos = []; // 多选选中的 todo ID 列表
         let isMultiSelectMode = false; // 是否处于多选模式
         let currentAttachments = []; // 当前待添加的附件列表
         let shareWithUsers = []; // 待共享的用户列表
-        
+        let isLoggedIn = ${user ? 'true' : 'false'}; // 用户登录状态
+
+        // 初始化可拖拽调整大小的文本域
+        function initResizableTextarea() {
+            const textarea = document.getElementById('todo-input');
+            const handle = document.getElementById('resize-handle');
+
+            if (!textarea || !handle) {
+                console.log('[拖拽调整] 元素未找到，跳过初始化');
+                return;
+            }
+
+            // 从 localStorage 加载保存的高度
+            const savedHeight = localStorage.getItem('todo_input_height');
+            if (savedHeight) {
+                const height = parseInt(savedHeight, 10);
+                if (height >= 80 && height <= 600) {
+                    textarea.style.height = height + 'px';
+                    console.log('[拖拽调整] 已恢复高度:', height + 'px');
+                }
+            }
+
+            let isDragging = false;
+            let startY = 0;
+            let startHeight = 0;
+
+            // 鼠标按下开始拖拽
+            handle.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startY = e.clientY;
+                startHeight = textarea.offsetHeight;
+                handle.classList.add('dragging');
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            });
+
+            // 触摸开始（移动端支持）
+            handle.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                startY = e.touches[0].clientY;
+                startHeight = textarea.offsetHeight;
+                handle.classList.add('dragging');
+                e.preventDefault();
+            }, { passive: false });
+
+            // 鼠标移动
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const deltaY = e.clientY - startY;
+                let newHeight = startHeight + deltaY;
+
+                // 限制最小和最大高度
+                newHeight = Math.max(80, Math.min(600, newHeight));
+
+                textarea.style.height = newHeight + 'px';
+            });
+
+            // 触摸移动
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+
+                const deltaY = e.touches[0].clientY - startY;
+                let newHeight = startHeight + deltaY;
+
+                // 限制最小和最大高度
+                newHeight = Math.max(80, Math.min(600, newHeight));
+
+                textarea.style.height = newHeight + 'px';
+                e.preventDefault();
+            }, { passive: false });
+
+            // 鼠标释放结束拖拽
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    handle.classList.remove('dragging');
+                    document.body.style.cursor = '';
+
+                    // 保存高度到 localStorage
+                    const finalHeight = textarea.offsetHeight;
+                    localStorage.setItem('todo_input_height', finalHeight.toString());
+                    console.log('[拖拽调整] 已保存高度:', finalHeight + 'px');
+                }
+            });
+
+            // 触摸结束
+            document.addEventListener('touchend', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    handle.classList.remove('dragging');
+
+                    // 保存高度到 localStorage
+                    const finalHeight = textarea.offsetHeight;
+                    localStorage.setItem('todo_input_height', finalHeight.toString());
+                    console.log('[拖拽调整] 已保存高度:', finalHeight + 'px');
+                }
+            });
+
+            console.log('[拖拽调整] 初始化完成');
+        }
+
         // 从 localStorage 加载共享用户列表
         function loadShareUsersFromStorage() {
             try {
@@ -604,7 +902,7 @@ export async function todoPage(request, env) {
                 shareWithUsers = [];
             }
         }
-        
+
         // 保存共享用户列表到 localStorage
         function saveShareUsersToStorage() {
             try {
@@ -614,17 +912,17 @@ export async function todoPage(request, env) {
                 console.error('[共享用户] 保存失败:', e);
             }
         }
-        
+
         // 渲染共享用户列表
         function renderShareList() {
             const shareListEl = document.getElementById('share-list');
             if (!shareListEl) return;
-            
+
             if (shareWithUsers.length === 0) {
                 shareListEl.innerHTML = '';
                 return;
             }
-            
+
             shareListEl.innerHTML = shareWithUsers.map((user, index) =>
                 '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #e3f2fd; border-radius: 16px; font-size: 13px; color: #1976d2;">'
                     + '<i class="fas fa-user" style="font-size: 11px;"></i>'
@@ -633,62 +931,68 @@ export async function todoPage(request, env) {
                 + '</span>'
             ).join('');
         }
-        
+
         // 添加共享用户
         function addShareUser() {
             const input = document.getElementById('share-input');
             const username = input?.value?.trim();
-            
+
             if (!username) {
                 showToast('请输入GitHub用户名', 'error');
                 return;
             }
-            
+
             if (shareWithUsers.includes(username)) {
                 showToast('该用户已添加', 'error');
                 return;
             }
-            
+
             shareWithUsers.push(username);
             saveShareUsersToStorage(); // 保存到 localStorage
             input.value = '';
             renderShareList();
         }
-        
+
         // 移除共享用户
         window.removeShareUser = function(index) {
             shareWithUsers.splice(index, 1);
             saveShareUsersToStorage(); // 保存到 localStorage
             renderShareList();
         }
-        
+
         // 清空共享用户列表
         function clearShareUsers() {
             shareWithUsers = [];
             saveShareUsersToStorage(); // 保存到 localStorage
             renderShareList();
         }
-        
+
         // 页面加载时获取数据
         document.addEventListener('DOMContentLoaded', () => {
             console.log('[初始化] DOMContentLoaded 事件触发');
             console.log('[初始化] 当前时间:', new Date().toISOString());
-            
+
             // 从 localStorage 加载共享用户列表
             loadShareUsersFromStorage();
             renderShareList();
-            
+
+            // 初始化输入框拖拽调整高度功能
+            initResizableTextarea();
+
+            // 初始化 header 折叠状态
+            initHeaderCollapseState();
+
             // 检查关键元素是否存在
             const todoListEl = document.getElementById('todo-list');
             const tagsSelectEl = document.getElementById('tags-select');
             const filterTagsEl = document.getElementById('filter-tags');
-            
+
             console.log('[初始化] todo-list 元素:', todoListEl ? '存在' : '不存在');
             console.log('[初始化] tags-select 元素:', tagsSelectEl ? '存在' : '不存在');
             console.log('[初始化] filter-tags 元素:', filterTagsEl ? '存在' : '不存在');
-            
+
             console.log('[初始化] 开始加载数据...');
-            
+
             // 设置加载超时检查
             setTimeout(() => {
                 console.log('[初始化] 5秒检查 - todos 长度:', todos.length);
@@ -697,21 +1001,26 @@ export async function todoPage(request, env) {
                     console.warn('[初始化] 警告: 5秒后仍未加载到 todos');
                 }
             }, 5000);
-            
-            try {
-                console.log('[初始化] 调用 loadTodos()');
-                loadTodos();
-            } catch (e) {
-                console.error('[初始化] loadTodos() 出错:', e);
+
+            // 只有登录后才加载数据
+            if (isLoggedIn) {
+                try {
+                    console.log('[初始化] 调用 loadTodos()');
+                    loadTodos();
+                } catch (e) {
+                    console.error('[初始化] loadTodos() 出错:', e);
+                }
+
+                try {
+                    console.log('[初始化] 调用 loadTags()');
+                    loadTags();
+                } catch (e) {
+                    console.error('[初始化] loadTags() 出错:', e);
+                }
+            } else {
+                console.log('[初始化] 用户未登录，跳过加载 todos 和 tags');
             }
-            
-            try {
-                console.log('[初始化] 调用 loadTags()');
-                loadTags();
-            } catch (e) {
-                console.error('[初始化] loadTags() 出错:', e);
-            }
-            
+
             // 绑定添加按钮点击事件
             try {
                 const addBtn = document.getElementById('add-btn');
@@ -724,7 +1033,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定添加按钮出错:', e);
             }
-            
+
             // 绑定 AI 优化按钮
             try {
                 const aiBtn = document.getElementById('ai-optimize-btn');
@@ -737,7 +1046,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定AI优化按钮出错:', e);
             }
-            
+
             // 绑定添加共享按钮
             try {
                 const addShareBtn = document.getElementById('add-share-btn');
@@ -748,7 +1057,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定添加共享按钮出错:', e);
             }
-            
+
             // 共享输入框回车添加
             try {
                 const shareInput = document.getElementById('share-input');
@@ -764,7 +1073,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定共享输入框出错:', e);
             }
-            
+
             // Ctrl+Enter 添加
             try {
                 const todoInput = document.getElementById('todo-input');
@@ -781,7 +1090,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定输入框事件出错:', e);
             }
-            
+
             // 绑定搜索输入
             try {
                 const searchInput = document.getElementById('search-input');
@@ -797,7 +1106,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定搜索输入出错:', e);
             }
-            
+
             // 绑定筛选按钮
             try {
                 ['filter-all', 'filter-pending', 'filter-shared', 'filter-completed', 'filter-shared-by-me'].forEach(id => {
@@ -813,7 +1122,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定筛选按钮出错:', e);
             }
-            
+
             // 绑定筛选面板按钮
             try {
                 const toggleFilterBtn = document.getElementById('toggle-filter-panel');
@@ -821,17 +1130,20 @@ export async function todoPage(request, env) {
                     toggleFilterBtn.addEventListener('click', toggleFilterPanel);
                     console.log('[初始化] 筛选面板按钮绑定成功');
                 }
+                // 初始化筛选面板状态（桌面端默认展开）
+                initFilterPanelState();
+                console.log('[初始化] 筛选面板状态初始化完成');
             } catch (e) {
                 console.error('[初始化] 绑定筛选面板按钮出错:', e);
             }
-            
+
             // 绑定多选按钮
             try {
                 const toggleMultiBtn = document.getElementById('toggle-multi-select');
                 const batchCompleteBtn = document.getElementById('batch-complete');
                 const batchDeleteBtn = document.getElementById('batch-delete');
                 const batchCancelBtn = document.getElementById('batch-cancel');
-                
+
                 if (toggleMultiBtn) {
                     toggleMultiBtn.addEventListener('click', toggleMultiSelectMode);
                     console.log('[初始化] 多选按钮绑定成功');
@@ -851,7 +1163,7 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定多选按钮出错:', e);
             }
-            
+
             // 绑定文件上传
             try {
                 const fileInput = document.getElementById('file-input');
@@ -864,10 +1176,10 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('[初始化] 绑定文件上传出错:', e);
             }
-            
+
             console.log('[初始化] DOMContentLoaded 处理完成');
         });
-        
+
         // 切换多选模式
         function toggleMultiSelectMode() {
             isMultiSelectMode = !isMultiSelectMode;
@@ -876,7 +1188,7 @@ export async function todoPage(request, env) {
             renderTodos();
             console.log('[多选] 模式切换:', isMultiSelectMode ? '开启' : '关闭');
         }
-        
+
         // 退出多选模式
         function exitMultiSelectMode() {
             isMultiSelectMode = false;
@@ -885,7 +1197,7 @@ export async function todoPage(request, env) {
             renderTodos();
             console.log('[多选] 退出多选模式');
         }
-        
+
         // 切换筛选面板显示
         function toggleFilterPanel() {
             const panel = document.getElementById('filter-panel');
@@ -904,14 +1216,38 @@ export async function todoPage(request, env) {
                 }
             }
         }
-        
+
+        // 初始化筛选面板状态（桌面端默认展开）
+        function initFilterPanelState() {
+            const panel = document.getElementById('filter-panel');
+            const btn = document.getElementById('toggle-filter-panel');
+            if (!panel || !btn) return;
+
+            // 检测是否为桌面端（宽度 >= 768px）
+            const isDesktop = window.innerWidth >= 768;
+
+            if (isDesktop) {
+                // 桌面端：默认展开
+                panel.style.maxHeight = '500px';
+                panel.style.opacity = '1';
+                panel.style.marginTop = '12px';
+                btn.setAttribute('variant', 'filled');
+            } else {
+                // 移动端：默认折叠
+                panel.style.maxHeight = '0px';
+                panel.style.opacity = '0';
+                panel.style.marginTop = '0px';
+                btn.setAttribute('variant', 'tonal');
+            }
+        }
+
         // 更新批量操作按钮显示
         function updateBatchButtons() {
             const toggleBtn = document.getElementById('toggle-multi-select');
             const completeBtn = document.getElementById('batch-complete');
             const deleteBtn = document.getElementById('batch-delete');
             const countSpan = document.getElementById('selected-count');
-            
+
             if (isMultiSelectMode) {
                 // 多选模式：多选按钮变紫色，显示完成/删除/计数
                 toggleBtn.setAttribute('variant', 'filled');
@@ -927,7 +1263,7 @@ export async function todoPage(request, env) {
                 countSpan.style.display = 'none';
             }
         }
-        
+
         // 切换 todo 选中状态
         function toggleTodoSelection(todoId) {
             if (selectedTodos.includes(todoId)) {
@@ -939,17 +1275,17 @@ export async function todoPage(request, env) {
             renderTodos();
             console.log('[多选] 选中项:', selectedTodos);
         }
-        
+
         // 批量完成
         async function batchComplete() {
             if (selectedTodos.length === 0) {
                 showToast('请先选择待办事项', 'error');
                 return;
             }
-            
+
             showToast('正在批量完成...');
             let successCount = 0;
-            
+
             for (const todoId of selectedTodos) {
                 try {
                     const response = await fetch('/api/todos/' + todoId, {
@@ -967,27 +1303,27 @@ export async function todoPage(request, env) {
                     console.error('[批量完成] 失败:', todoId, e);
                 }
             }
-            
+
             renderTodos();
             updateStats();
             showToast('已完成 ' + successCount + ' 项');
             exitMultiSelectMode();
         }
-        
+
         // 批量删除
         async function batchDelete() {
             if (selectedTodos.length === 0) {
                 showToast('请先选择待办事项', 'error');
                 return;
             }
-            
+
             if (!confirm('确定要删除选中的 ' + selectedTodos.length + ' 个待办事项吗？')) {
                 return;
             }
-            
+
             showToast('正在批量删除...');
             let successCount = 0;
-            
+
             for (const todoId of selectedTodos) {
                 try {
                     const response = await fetch('/api/todos/' + todoId, {
@@ -1002,31 +1338,31 @@ export async function todoPage(request, env) {
                     console.error('[batchDelete] failed:', todoId, e);
                 }
             }
-            
+
             renderTodos();
             updateStats();
             showToast('已删除 ' + successCount + ' 项');
             exitMultiSelectMode();
         }
-        
+
         // 显示资源信息
         async function showResourceInfo() {
             console.log('[ResourceInfo] fetching...');
-            
+
             try {
                 const response = await fetch('/api/resources');
                 const data = await response.json();
                 console.log('[ResourceInfo] data:', data);
-                
+
                 if (data.success) {
                     // 创建信息弹窗
                     const overlay = document.createElement('div');
                     overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.3s ease;';
-                    
+
                     const dialog = document.createElement('div');
                     // 初始状态：整体缩小并偏移
                     dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; text-align: center; transform: scale(0.5) translate(-20%, -20%); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);';
-                    dialog.innerHTML = 
+                    dialog.innerHTML =
                         '<h3 style="margin: 0 0 20px 0; color: #333;">Cloudflare Resources</h3>' +
                         '<div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">' +
                             '<div style="background: #f8f9fa; padding: 15px; border-radius: 12px;">' +
@@ -1055,17 +1391,17 @@ export async function todoPage(request, env) {
                             '• Workers: 100k requests/day' +
                         '</div>' +
                         '<mdui-button onclick="closeResourceDialog(this)" variant="filled" style="width: 100%;">Close</mdui-button>';
-                    
+
                     overlay.appendChild(dialog);
                     document.body.appendChild(overlay);
-                    
+
                     // 触发动画 - 从小放大到正常
                     requestAnimationFrame(() => {
                         overlay.style.opacity = '1';
                         dialog.style.transform = 'scale(1) translate(0, 0)';
                         dialog.style.opacity = '1';
                     });
-                    
+
                     // 关闭函数
                     window.closeResourceDialog = function(btn) {
                         // 找到按钮所在的 dialog，然后找到 overlay
@@ -1078,12 +1414,12 @@ export async function todoPage(request, env) {
                         }
                         const overlay = el;
                         const dialog = overlay.querySelector('div');
-                        
+
                         // 反向动画 - 缩小并偏移
                         overlay.style.opacity = '0';
                         dialog.style.transform = 'scale(0.5) translate(-20%, -20%)';
                         dialog.style.opacity = '0';
-                        
+
                         setTimeout(() => {
                             if (overlay.parentNode === document.body) {
                                 document.body.removeChild(overlay);
@@ -1091,7 +1427,7 @@ export async function todoPage(request, env) {
                             delete window.closeResourceDialog;
                         }, 400);
                     };
-                    
+
                     // 点击遮罩关闭
                     overlay.addEventListener('click', (e) => {
                         if (e.target === overlay) {
@@ -1113,20 +1449,20 @@ export async function todoPage(request, env) {
                 showToast('Failed to get resource info: ' + e.message, 'error');
             }
         }
-        
+
         // 处理文件选择
         async function handleFileSelect(e) {
             const files = e.target.files;
             if (!files || files.length === 0) return;
-            
+
             const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-            
+
             for (const file of files) {
                 if (file.size > MAX_SIZE) {
                     showToast('File too large: ' + file.name + ' (max 5MB)', 'error');
                     continue;
                 }
-                
+
                 // 添加到当前附件列表（先显示上传中）
                 const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 const attachment = {
@@ -1139,18 +1475,18 @@ export async function todoPage(request, env) {
                 };
                 currentAttachments.push(attachment);
                 renderAttachments();
-                
+
                 // 上传到服务器
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    
+
                     showToast('Uploading ' + file.name + '...');
                     const response = await fetch('/api/upload', {
                         method: 'POST',
                         body: formData
                     });
-                    
+
                     const data = await response.json();
                     if (data.success) {
                         // 更新附件信息
@@ -1167,38 +1503,38 @@ export async function todoPage(request, env) {
                     showToast('Upload error: ' + file.name, 'error');
                     currentAttachments = currentAttachments.filter(a => a.id !== tempId);
                 }
-                
+
                 renderAttachments();
             }
-            
+
             // 清空 input 以便重复选择相同文件
             e.target.value = '';
         }
-        
+
         // 渲染附件列表
         function renderAttachments() {
             const container = document.getElementById('attachment-list');
             const section = document.getElementById('attachments-section');
             const countSpan = document.getElementById('attachment-count');
-            
+
             if (!container) return;
-            
+
             countSpan.textContent = currentAttachments.length;
-            
+
             if (currentAttachments.length === 0) {
                 section.style.display = 'none';
                 container.innerHTML = '';
                 return;
             }
-            
+
             section.style.display = 'block';
-            
+
             let html = '';
             currentAttachments.forEach(att => {
                 const isImage = att.type && att.type.startsWith('image/');
                 const icon = isImage ? 'fa-image' : 'fa-file';
                 const sizeStr = formatFileSize(att.size);
-                
+
                 html += '<div style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px;" data-att-id="' + att.id + '">' +
                     '<i class="fas ' + icon + '" style="color: #666;"></i>' +
                     '<span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">' + escapeHtml(att.name) + '</span>' +
@@ -1207,9 +1543,9 @@ export async function todoPage(request, env) {
                     '<mdui-button-icon class="remove-att-btn" icon="close" style="color: #ff6b6b;"></mdui-button-icon>' +
                 '</div>';
             });
-            
+
             container.innerHTML = html;
-            
+
             // 绑定删除按钮事件
             container.querySelectorAll('.remove-att-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1219,7 +1555,7 @@ export async function todoPage(request, env) {
                 });
             });
         }
-        
+
         // 移除附件
         async function removeAttachment(id) {
             const att = currentAttachments.find(a => a.id === id);
@@ -1233,11 +1569,11 @@ export async function todoPage(request, env) {
                     console.error('Delete attachment error:', e);
                 }
             }
-            
+
             currentAttachments = currentAttachments.filter(a => a.id !== id);
             renderAttachments();
         }
-        
+
         // 格式化文件大小
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 B';
@@ -1246,46 +1582,46 @@ export async function todoPage(request, env) {
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
-        
+
         // 渲染 todo 附件
         function renderTodoAttachments(attachments) {
             if (!attachments || attachments.length === 0) return '';
-            
+
             let html = '<div class="todo-attachments" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;">';
-            
+
             attachments.forEach((att, index) => {
                 const isImage = att.type && att.type.startsWith('image/');
                 const isText = att.type && (att.type.startsWith('text/') || att.type === 'application/json');
                 const icon = isImage ? 'fa-image' : (isText ? 'fa-file-alt' : 'fa-file');
                 const color = isImage ? '#ff6b6b' : (isText ? '#4ade80' : '#54a0ff');
-                
+
                 html += '<div class="todo-att-item" data-att-index="' + index + '" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: white; border-radius: 20px; cursor: pointer; font-size: 12px; border: 1px solid #e0e0e0; transition: all 0.2s;">' +
                     '<i class="fas ' + icon + '" style="color: ' + color + ';"></i>' +
                     '<span style="max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + escapeHtml(att.name) + '</span>' +
                 '</div>';
             });
-            
+
             html += '</div>';
             return html;
         }
-        
+
         // 查看附件
         function viewAttachment(att) {
             const isImage = att.type && att.type.startsWith('image/');
             const isText = att.type && (att.type.startsWith('text/') || att.type === 'application/json');
-            
+
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
-            
+
             const content = document.createElement('div');
             content.style.cssText = 'background: white; border-radius: 16px; max-width: 90%; max-height: 90%; overflow: auto; position: relative;';
-            
+
             let innerHtml = '<div style="padding: 20px;">';
             innerHtml += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
             innerHtml += '<h3 style="margin: 0; font-size: 16px;">' + escapeHtml(att.name) + '</h3>';
             innerHtml += '<mdui-button-icon icon="close" onclick="this.parentElement.parentElement.parentElement.remove()"></mdui-button-icon>';
             innerHtml += '</div>';
-            
+
             if (isImage) {
                 innerHtml += '<img src="' + att.url + '" style="max-width: 100%; max-height: 70vh; border-radius: 8px; display: block;">';
             } else if (isText) {
@@ -1293,14 +1629,14 @@ export async function todoPage(request, env) {
             } else {
                 innerHtml += '<div style="text-align: center; padding: 40px;"><i class="fas fa-file" style="font-size: 48px; color: #ccc;"></i><p style="margin-top: 15px; color: #666;">Preview not available</p><a href="' + att.url + '" download style="display: inline-block; margin-top: 10px; padding: 10px 20px; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; text-decoration: none; border-radius: 8px;">Download</a></div>';
             }
-            
+
             innerHtml += '</div>';
             content.innerHTML = innerHtml;
-            
+
             overlay.className = 'fixed-overlay';
             overlay.appendChild(content);
             document.body.appendChild(overlay);
-            
+
             // 加载文本内容
             if (isText) {
                 fetch(att.url)
@@ -1314,7 +1650,7 @@ export async function todoPage(request, env) {
                         if (pre) pre.textContent = 'Error loading file: ' + e.message;
                     });
             }
-            
+
             // 点击遮罩关闭
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -1322,25 +1658,25 @@ export async function todoPage(request, env) {
                 }
             });
         }
-        
+
         let currentFilter = 'pending'; // 默认筛选未完成的
-        
+
         // 设置筛选
         function setFilter(filter) {
             currentFilter = filter;
-            
+
             // 更新按钮样式
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.setAttribute('variant', 'tonal');
             });
-            
+
             const activeBtn = document.getElementById('filter-' + filter);
             activeBtn.setAttribute('variant', 'filled');
-            
+
             // 重新加载数据（服务端过滤）
             loadTodos();
         }
-        
+
         // 检查是否是今天创建的
         function isToday(dateString) {
             const date = new Date(dateString);
@@ -1349,23 +1685,41 @@ export async function todoPage(request, env) {
                    date.getMonth() === today.getMonth() &&
                    date.getFullYear() === today.getFullYear();
         }
-        
+
         // 渲染筛选标签
         function renderFilterTags() {
             const container = document.getElementById('filter-tags');
-            
+
             if (allTags.length === 0) {
                 container.innerHTML = '<span style="font-size: 14px; color: #666;">筛选标签:</span><span style="font-size: 12px; color: #999;">暂无标签</span>';
                 return;
             }
-            
-            let html = '<span style="font-size: 14px; color: #666;">筛选标签:</span>';
-            
+
+            let html = '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; margin-bottom: 8px;">';
+            html += '<span style="font-size: 14px; color: #666;">筛选标签:</span>';
+
+            // 添加模式切换开关（只在选择了多个标签时显示）
+            if (filterTags.length >= 2) {
+                html += '<div style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: #f5f5f5; border-radius: 12px; font-size: 12px;">';
+                html += '<span style="color: ' + (tagFilterMode === 'or' ? '#ff6b6b' : '#999') + '; font-weight: ' + (tagFilterMode === 'or' ? '600' : '400') + ';">或</span>';
+                html += '<label style="position: relative; display: inline-block; width: 36px; height: 20px; cursor: pointer;">';
+                html += '<input type="checkbox" id="tag-mode-toggle" ' + (tagFilterMode === 'and' ? 'checked' : '') + ' style="opacity: 0; width: 0; height: 0;" onchange="toggleTagFilterMode()">';
+                html += '<span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: ' + (tagFilterMode === 'and' ? '#4ade80' : '#ccc') + '; border-radius: 20px; transition: .3s;"></span>';
+                html += '<span style="position: absolute; top: 2px; left: ' + (tagFilterMode === 'and' ? '18px' : '2px') + '; width: 16px; height: 16px; background: white; border-radius: 50%; transition: .3s;"></span>';
+                html += '</label>';
+                html += '<span style="color: ' + (tagFilterMode === 'and' ? '#4ade80' : '#999') + '; font-weight: ' + (tagFilterMode === 'and' ? '600' : '400') + ';">与</span>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+
+            // 标签列表
+            html += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
             allTags.forEach(tag => {
                 const tagName = typeof tag === 'object' ? tag.name : tag;
                 const tagColor = typeof tag === 'object' ? tag.color : null;
                 const isSelected = filterTags.includes(tagName);
-                
+
                 if (isSelected) {
                     html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + '; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 } else if (tagColor) {
@@ -1374,10 +1728,19 @@ export async function todoPage(request, env) {
                     html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 }
             });
-            
+            html += '</div>';
+
             container.innerHTML = html;
         }
-        
+
+        // 切换标签筛选模式
+        function toggleTagFilterMode() {
+            tagFilterMode = tagFilterMode === 'or' ? 'and' : 'or';
+            console.log('[标签筛选] 模式切换为:', tagFilterMode);
+            renderFilterTags();
+            renderTodos();
+        }
+
         // 切换筛选标签
         function toggleFilterTag(tagName) {
             if (filterTags.includes(tagName)) {
@@ -1388,7 +1751,7 @@ export async function todoPage(request, env) {
             renderFilterTags();
             renderTodos();
         }
-        
+
         // 切换清除按钮显示
         function toggleClearButton() {
             const searchInput = document.getElementById('search-input');
@@ -1397,7 +1760,7 @@ export async function todoPage(request, env) {
                 clearBtn.style.display = searchInput.value.trim() ? 'inline-block' : 'none';
             }
         }
-        
+
         // 清除所有筛选
         function clearFilters() {
             searchKeyword = '';
@@ -1407,12 +1770,12 @@ export async function todoPage(request, env) {
             renderFilterTags();
             renderTodos();
         }
-        
+
         // 加载标签列表
         async function loadTags() {
             console.log('[loadTags] 开始加载标签列表...');
             console.log('[loadTags] 当前 allTags 长度:', allTags.length);
-            
+
             try {
                 console.log('[loadTags] 发起 fetch 请求: /api/tags');
                 const startTime = Date.now();
@@ -1420,12 +1783,12 @@ export async function todoPage(request, env) {
                 const endTime = Date.now();
                 console.log('[loadTags] 请求耗时:', endTime - startTime, 'ms');
                 console.log('[loadTags] 响应状态:', response.status, response.statusText);
-                
+
                 console.log('[loadTags] 开始解析 JSON...');
                 const data = await response.json();
                 console.log('[loadTags] 解析完成, 数据:', data);
                 console.log('[loadTags] 返回的 tags 数量:', data.tags ? data.tags.length : 0);
-                
+
                 if (data.success) {
                     allTags = data.tags || [];
                     console.log('[loadTags] 更新 allTags 数组, 新长度:', allTags.length);
@@ -1442,24 +1805,24 @@ export async function todoPage(request, env) {
                 console.error('[loadTags] 错误堆栈:', e.stack);
             }
         }
-        
+
         // 渲染标签选择器
         function renderTagSelect() {
             const container = document.getElementById('tags-select');
-            
+
             if (allTags.length === 0) {
                 container.innerHTML = '<span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span><a href="/tags" style="font-size: 12px; color: #ff6b6b;">还没有标签，去创建 →</a>';
                 return;
             }
-            
+
             let html = '<span style="font-size: 14px; color: #666; margin-right: 8px;">选择标签:</span>';
-            
+
             allTags.forEach(tag => {
                 // 支持新格式 {name, color} 和旧格式 string
                 const tagName = typeof tag === 'object' ? tag.name : tag;
                 const tagColor = typeof tag === 'object' ? tag.color : null;
                 const isSelected = selectedTags.includes(tagName);
-                
+
                 if (isSelected) {
                     // 选中状态：使用标签原本的颜色，添加白色边框
                     html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + '; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
@@ -1469,10 +1832,10 @@ export async function todoPage(request, env) {
                     html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 }
             });
-            
+
             container.innerHTML = html;
         }
-        
+
         // 切换标签选择
         function toggleTag(tag) {
             if (selectedTags.includes(tag)) {
@@ -1482,30 +1845,30 @@ export async function todoPage(request, env) {
             }
             renderTagSelect();
         }
-        
+
         // 显示提示
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = 'toast ' + type;
             toast.classList.add('show');
-            
+
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 2000);
         }
-        
+
         // 显示带撤销按钮的提示
         function showToastWithUndo(message, originalText, optimizedText) {
             const toast = document.getElementById('toast');
-            toast.innerHTML = 
+            toast.innerHTML =
                 '<div style="display: flex; align-items: center; gap: 12px; white-space: nowrap;">' +
                     '<span style="white-space: nowrap;">' + message + '</span>' +
                     '<mdui-button id="undo-btn" variant="text" style="color: inherit; --mdui-comp-text-button-container-height: 28px; font-size: 12px; padding: 0 8px; white-space: nowrap; flex-shrink: 0;">撤销</mdui-button>' +
                 '</div>';
             toast.className = 'toast success';
             toast.classList.add('show');
-            
+
             // 绑定撤销按钮
             const undoBtn = document.getElementById('undo-btn');
             if (undoBtn) {
@@ -1516,35 +1879,35 @@ export async function todoPage(request, env) {
                     showToast('已撤销', 'success');
                 });
             }
-            
+
             // 10秒后自动隐藏
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 10000);
         }
-        
+
         // 加载待办列表
         async function loadTodos() {
             console.log('[loadTodos] 开始加载待办列表...');
             console.log('[loadTodos] 当前 todos 长度:', todos.length);
-            
+
             try {
                 // 构建 URL，添加 filter 参数
                 const url = new URL('/api/todos', window.location.origin);
                 url.searchParams.set('filter', currentFilter);
-                
+
                 console.log('[loadTodos] 发起 fetch 请求:', url.toString());
                 const startTime = Date.now();
                 const response = await fetch(url);
                 const endTime = Date.now();
                 console.log('[loadTodos] 请求耗时:', endTime - startTime, 'ms');
                 console.log('[loadTodos] 响应状态:', response.status, response.statusText);
-                
+
                 console.log('[loadTodos] 开始解析 JSON...');
                 const data = await response.json();
                 console.log('[loadTodos] 解析完成, 数据:', data);
                 console.log('[loadTodos] 返回的 todos 数量:', data.todos ? data.todos.length : 0);
-                
+
                 if (data.todos) {
                     todos = data.todos;
                     console.log('[loadTodos] 更新 todos 数组, 新长度:', todos.length);
@@ -1566,30 +1929,35 @@ export async function todoPage(request, env) {
                 }
             }
         }
-        
+
         // 渲染待办列表
         function renderTodos() {
             const listEl = document.getElementById('todo-list');
-            
+
             // 服务端已经过滤，只需要处理标签和搜索筛选
             let filteredTodos = todos;
-            
+
             // 标签筛选
             if (filterTags.length > 0) {
                 filteredTodos = filteredTodos.filter(todo => {
                     if (!todo.tags || todo.tags.length === 0) return false;
-                    // 只要包含任一选中的标签就显示
-                    return filterTags.some(filterTag => todo.tags.includes(filterTag));
+                    if (tagFilterMode === 'and') {
+                        // "与"模式：必须包含所有选中的标签
+                        return filterTags.every(filterTag => todo.tags.includes(filterTag));
+                    } else {
+                        // "或"模式（默认）：只要包含任一选中的标签就显示
+                        return filterTags.some(filterTag => todo.tags.includes(filterTag));
+                    }
                 });
             }
-            
+
             // 搜索筛选
             if (searchKeyword) {
                 filteredTodos = filteredTodos.filter(todo => {
                     return todo.text.toLowerCase().includes(searchKeyword.toLowerCase());
                 });
             }
-            
+
             // 排序：先按完成状态（未完成在前），再按时间逆序
             filteredTodos.sort((a, b) => {
                 // 完成状态不同，未完成的在前
@@ -1599,23 +1967,23 @@ export async function todoPage(request, env) {
                 // 完成状态相同，按时间逆序（新的在前）
                 return new Date(b.created_at) - new Date(a.created_at);
             });
-            
+
             if (filteredTodos.length === 0) {
                 listEl.innerHTML = '<h2>📝 待办事项</h2><div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">暂无待办事项，添加一个吧！</div></div>';
                 return;
             }
-            
-            let html = '<h2>📝 待办事项</h2>';
-            
+
+            let html = '<h2>📝 待办事项</h2><div class="todo-items-container">';
+
             filteredTodos.forEach(todo => {
                 const date = new Date(todo.created_at);
-                const timeStr = date.toLocaleString('zh-CN', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                const timeStr = date.toLocaleString('zh-CN', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
                 });
-                
+
                 // 渲染标签 - 使用标签的颜色
                 let tagsHtml = '';
                 if (todo.tags && todo.tags.length > 0) {
@@ -1629,33 +1997,33 @@ export async function todoPage(request, env) {
                     });
                     tagsHtml += '</div>';
                 }
-                
+
                 // 渲染附件
                 let attachmentsHtml = '';
                 if (todo.attachments && todo.attachments.length > 0) {
                     attachmentsHtml = renderTodoAttachments(todo.attachments);
                 }
-                
+
                 const itemClass = todo.done ? 'todo-item completed' : 'todo-item';
                 const isSelected = selectedTodos.includes(todo.id);
-                
+
                 // 多选复选框
                 let multiSelectHtml = '';
                 if (isMultiSelectMode) {
                     multiSelectHtml = '<div class="multi-select-checkbox" onclick="event.stopPropagation(); toggleTodoSelection(' + todo.id + ')" style="float: left; margin-right: 10px; width: 20px; height: 20px; border: 2px solid #ff6b6b; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: ' + (isSelected ? 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)' : 'white') + ';">' + (isSelected ? '<i class="fas fa-check" style="color: white; font-size: 12px;"></i>' : '') + '</div>';
                 }
-                
+
                 // 创建者和共享信息
                 let ownerHtml = '';
-                
+
                 // 获取共享用户列表（从 todo 的 shares 属性或通过 API 获取）
                 const shares = todo.shares || [];
                 const hasShares = shares.length > 0 || todo.isShared;
-                
+
                 // 如果是共享项（自己创建的共享给别人，或别人共享给我），显示创建者和共享信息
                 if (hasShares || todo.isShared) {
                     ownerHtml += '<div style="margin-top: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 6px;">';
-                    
+
                     // 显示创建者
                     if (todo.user_login) {
                         ownerHtml += '<div style="display: flex; align-items: center; gap: 6px; color: #666;">';
@@ -1663,7 +2031,7 @@ export async function todoPage(request, env) {
                         ownerHtml += '<span>创建者: ' + escapeHtml(todo.user_login) + '</span>';
                         ownerHtml += '</div>';
                     }
-                    
+
                     // 显示共享标记
                     if (hasShares || todo.isShared) {
                         ownerHtml += '<div style="display: flex; align-items: center; gap: 6px; color: #f59e0b;">';
@@ -1671,7 +2039,7 @@ export async function todoPage(request, env) {
                         ownerHtml += '<span>共享项目</span>';
                         ownerHtml += '</div>';
                     }
-                    
+
                     // 显示所有共享人
                     if (shares.length > 0) {
                         ownerHtml += '<div style="display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">';
@@ -1685,10 +2053,10 @@ export async function todoPage(request, env) {
                         });
                         ownerHtml += '</div>';
                     }
-                    
+
                     ownerHtml += '</div>';
                 }
-                
+
                 html += '<div class="' + itemClass + (isSelected ? ' selected' : '') + '" data-id="' + todo.id + '" onclick="' + (isMultiSelectMode ? 'toggleTodoSelection(' + todo.id + ')' : 'selectTodo(this)') + '">' +
                     multiSelectHtml +
                     '<div class="todo-actions">' +
@@ -1697,8 +2065,8 @@ export async function todoPage(request, env) {
                         '<mdui-button-icon class="share-btn" onclick="event.stopPropagation(); openShareDialog(' + todo.id + ')" title="共享" icon="share" style="color: #f59e0b;"></mdui-button-icon>' +
                         '<mdui-button-icon class="delete-btn" onclick="event.stopPropagation(); deleteTodo(' + todo.id + ')" title="删除" icon="delete" style="color: #ff6b6b;"></mdui-button-icon>' +
                     '</div>' +
-                    (!isMultiSelectMode ? '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' : '') +
                     '<div class="todo-content">' +
+                        (!isMultiSelectMode ? '<div class="todo-checkbox checkbox ' + (todo.done ? 'checked' : '') + '" onclick="event.stopPropagation(); toggleTodo(' + todo.id + ')"></div>' : '') +
                         '<div class="todo-text">' + escapeHtml(todo.text) + '</div>' +
                         tagsHtml +
                         attachmentsHtml +
@@ -1707,9 +2075,11 @@ export async function todoPage(request, env) {
                     '</div>' +
                 '</div>';
             });
-            
+
+            html += '</div>'; // 关闭 todo-items-container
+
             listEl.innerHTML = html;
-            
+
             // 绑定附件点击事件
             listEl.querySelectorAll('.todo-attachments').forEach((container, index) => {
                 const todoId = filteredTodos[index].id;
@@ -1725,7 +2095,7 @@ export async function todoPage(request, env) {
                 }
             });
         }
-        
+
         // 选中 todo 项（移动端用）
         function selectTodo(element) {
             // 移除其他项的选中状态
@@ -1737,22 +2107,22 @@ export async function todoPage(request, env) {
             // 切换当前项的选中状态
             element.classList.toggle('selected');
         }
-        
+
         // 编辑待办
         function editTodo(id) {
             const todo = todos.find(t => t.id === id);
             if (!todo) return;
-            
+
             // 当前编辑的标签
             let editTags = todo.tags ? [...todo.tags] : [];
-            
+
             // 创建自定义编辑对话框
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
-            
+
             const dialog = document.createElement('div');
             dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;';
-            
+
             // 渲染标签选择
             function renderEditTags() {
                 let tagsHtml = '';
@@ -1762,7 +2132,7 @@ export async function todoPage(request, env) {
                         const tagName = typeof tag === 'object' ? tag.name : tag;
                         const tagColor = typeof tag === 'object' ? tag.color : null;
                         const isSelected = editTags.includes(tagName);
-                        
+
                         if (isSelected) {
                             tagsHtml += '<span class="edit-tag-item" data-tag="' + escapeHtml(tagName) + '" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + ';">' + escapeHtml(tagName) + '</span>';
                         } else if (tagColor) {
@@ -1775,7 +2145,7 @@ export async function todoPage(request, env) {
                 }
                 return tagsHtml;
             }
-            
+
             dialog.innerHTML = '<h3 style="margin: 0 0 15px 0; color: #333;">编辑待办</h3>' +
                 '<textarea id="edit-textarea" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="输入待办内容...">' + escapeHtml(todo.text) + '</textarea>' +
                 '<div id="edit-tags-container">' + renderEditTags() + '</div>' +
@@ -1783,10 +2153,10 @@ export async function todoPage(request, env) {
                     '<mdui-button id="edit-cancel" variant="outlined">取消</mdui-button>' +
                     '<mdui-button id="edit-save" variant="filled">保存</mdui-button>' +
                 '</div>';
-            
+
             overlay.appendChild(dialog);
             document.body.appendChild(overlay);
-            
+
             // 绑定标签点击事件
             dialog.querySelectorAll('.edit-tag-item').forEach(tagEl => {
                 tagEl.addEventListener('click', () => {
@@ -1812,38 +2182,38 @@ export async function todoPage(request, env) {
                     });
                 });
             });
-            
+
             const textarea = dialog.querySelector('#edit-textarea');
             textarea.focus();
             textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            
+
             // 取消按钮
             dialog.querySelector('#edit-cancel').addEventListener('click', () => {
                 document.body.removeChild(overlay);
             });
-            
+
             // 保存按钮
             dialog.querySelector('#edit-save').addEventListener('click', () => {
                 const newText = textarea.value.trim();
-                
+
                 if (!newText) {
                     showToast('待办事项不能为空', 'error');
                     return;
                 }
-                
+
                 const textChanged = newText !== todo.text;
                 const tagsChanged = JSON.stringify(editTags.sort()) !== JSON.stringify((todo.tags || []).sort());
-                
+
                 if (!textChanged && !tagsChanged) {
                     document.body.removeChild(overlay);
                     return;
                 }
-                
+
                 // 发送更新请求
                 const updateData = {};
                 if (textChanged) updateData.text = newText;
                 if (tagsChanged) updateData.tags = editTags;
-                
+
                 fetch('/api/todos/' + id, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -1865,14 +2235,14 @@ export async function todoPage(request, env) {
                     showToast('编辑失败: ' + e.message, 'error');
                 });
             });
-            
+
             // 点击遮罩关闭
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
                     document.body.removeChild(overlay);
                 }
             });
-            
+
             // ESC 键关闭
             const handleEsc = (e) => {
                 if (e.key === 'Escape') {
@@ -1882,14 +2252,14 @@ export async function todoPage(request, env) {
             };
             document.addEventListener('keydown', handleEsc);
         }
-        
+
         // 复制待办内容
         async function copyTodoText(id) {
             const todo = todos.find(t => t.id === id);
             if (!todo) return;
-            
+
             const textToCopy = todo.text;
-            
+
             try {
                 await navigator.clipboard.writeText(textToCopy);
                 showToast('已复制到剪贴板！');
@@ -1906,13 +2276,13 @@ export async function todoPage(request, env) {
                 showToast('已复制到剪贴板！');
             }
         }
-        
+
         // 更新统计（从服务端获取全量数据）
         async function updateStats() {
             try {
                 const response = await fetch('/api/todos/stats');
                 const data = await response.json();
-                
+
                 if (data.success && data.stats) {
                     document.getElementById('total-count').textContent = data.stats.total;
                     document.getElementById('pending-count').textContent = data.stats.pending;
@@ -1924,31 +2294,31 @@ export async function todoPage(request, env) {
                 console.error('[updateStats] 获取统计失败:', e);
             }
         }
-        
+
         // 添加待办
         // AI 优化待办文本
         async function optimizeTodoText() {
             const input = document.getElementById('todo-input');
             const btn = document.getElementById('ai-optimize-btn');
             const originalText = input.value.trim();
-            
+
             if (!originalText) {
                 showToast('请先输入待办事项内容', 'error');
                 return;
             }
-            
+
             btn.disabled = true;
             btn.textContent = '优化中...';
-            
+
             try {
                 const response = await fetch('/api/ai/optimize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: originalText })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success && data.optimized) {
                     // 显示优化前后的对比
                     if (data.optimized !== originalText) {
@@ -1967,20 +2337,20 @@ export async function todoPage(request, env) {
                 btn.textContent = 'AI 优化';
             }
         }
-        
+
         async function addTodo() {
             const input = document.getElementById('todo-input');
             const btn = document.getElementById('add-btn');
             const text = input.value.trim();
-            
+
             if (!text) {
                 showToast('请输入待办事项', 'error');
                 return;
             }
-            
+
             btn.disabled = true;
             btn.textContent = '添加中...';
-            
+
             try {
                 // 准备附件数据（排除上传中的和临时文件）
                 const attachments = currentAttachments
@@ -1992,19 +2362,19 @@ export async function todoPage(request, env) {
                         type: att.type,
                         url: att.url
                     }));
-                
+
                 const response = await fetch('/api/todos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         text: text,
                         tags: selectedTags,
                         attachments: attachments
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // 如果有共享用户，逐个共享
                     let shareSuccessCount = 0;
@@ -2038,12 +2408,12 @@ export async function todoPage(request, env) {
                     } else {
                         showToast('添加成功！');
                     }
-                    
+
                     input.value = '';
                     selectedTags = [];
                     currentAttachments = []; // 清空附件列表
                     // 不再清空共享用户列表，保留到 localStorage
-                    // shareWithUsers = []; 
+                    // shareWithUsers = [];
                     // clearShareUsers();
                     renderAttachments();
                     renderTagSelect();
@@ -2060,45 +2430,73 @@ export async function todoPage(request, env) {
                 btn.textContent = '添加';
             }
         }
-        
+
+        // 正在处理中的 todo ID 集合
+        const processingTodos = new Set();
+
         // 切换完成状态
         async function toggleTodo(id) {
             const todo = todos.find(t => t.id === id);
             if (!todo) return;
-            
+
+            // 如果正在处理中，直接返回，防止重复点击
+            if (processingTodos.has(id)) {
+                return;
+            }
+
+            // 标记为处理中
+            processingTodos.add(id);
+
+            // 找到对应的 checkbox 元素并添加 loading 样式
+            const todoItem = document.querySelector('.todo-item[data-id="' + id + '"]');
+            const checkbox = todoItem ? todoItem.querySelector('.todo-checkbox') : null;
+
+            if (checkbox) {
+                checkbox.style.pointerEvents = 'none';
+                checkbox.style.opacity = '0.7';
+                // 添加 loading spinner
+                checkbox.setAttribute('data-loading', 'true');
+                checkbox.style.position = 'relative';
+            }
+
             try {
                 const response = await fetch('/api/todos/' + id, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ done: !todo.done })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     todo.done = !todo.done;
                     renderTodos();
                     updateStats();
                     showToast(todo.done ? '已完成！' : '已取消完成');
+                } else {
+                    showToast(data.error || '操作失败', 'error');
                 }
             } catch (e) {
                 showToast('操作失败: ' + e.message, 'error');
+            } finally {
+                // 移除处理中标记
+                processingTodos.delete(id);
             }
         }
-        
+
         // 删除待办
         async function deleteTodo(id) {
             if (!confirm('确定要删除这个待办事项吗？')) {
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/todos/' + id, {
                     method: 'DELETE'
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     todos = todos.filter(t => t.id !== id);
                     renderTodos();
@@ -2109,26 +2507,26 @@ export async function todoPage(request, env) {
                 showToast('删除失败: ' + e.message, 'error');
             }
         }
-        
+
         // HTML 转义
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
+
         // 导出待办数据
         async function exportTodos() {
             try {
                 showToast('正在准备导出...');
-                
+
                 // 获取所有数据
                 const response = await fetch('/api/todos/export');
-                
+
                 if (!response.ok) {
                     throw new Error('导出失败: ' + response.status);
                 }
-                
+
                 // 获取文件名
                 const disposition = response.headers.get('Content-Disposition');
                 let filename = 'todos-export.json';
@@ -2136,7 +2534,7 @@ export async function todoPage(request, env) {
                     const match = disposition.match(/filename="(.+)"/);
                     if (match) filename = match[1];
                 }
-                
+
                 // 下载文件
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -2147,13 +2545,13 @@ export async function todoPage(request, env) {
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-                
+
                 showToast('导出成功！');
             } catch (e) {
                 showToast('导出失败: ' + e.message, 'error');
             }
         }
-        
+
         // 验证 GitHub 用户名是否存在
         async function verifyGitHubUser(username) {
             try {
@@ -2168,12 +2566,12 @@ export async function todoPage(request, env) {
                 return null;
             }
         }
-        
+
         // 打开共享对话框
         async function openShareDialog(todoId) {
             const todo = todos.find(t => t.id === todoId);
             if (!todo) return;
-            
+
             // 检查权限（只有创建者可以管理共享）
             // 从 API 返回的 user 信息中获取当前用户
             let currentUserLogin = '';
@@ -2187,11 +2585,11 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('获取当前用户失败:', e);
             }
-            
+
             const isOwner = todo.user_login === currentUserLogin;
-            
+
             console.log('共享对话框 - 创建者:', todo.user_login, '当前用户:', currentUserLogin, '是否创建者:', isOwner);
-            
+
             // 获取当前共享列表
             let shares = [];
             try {
@@ -2203,72 +2601,72 @@ export async function todoPage(request, env) {
             } catch (e) {
                 console.error('获取共享列表失败:', e);
             }
-            
+
             // 创建对话框
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
             overlay.className = 'share-dialog-overlay';
-            
+
             const dialog = document.createElement('div');
             dialog.style.cssText = 'background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 450px; max-height: 80vh; overflow-y: auto;';
-            
+
             // 构建对话框内容 - 使用 DOM 操作避免字符串转义问题
             const title = document.createElement('h3');
             title.style.cssText = 'margin: 0 0 20px 0; color: #333; font-size: 18px;';
             title.innerHTML = '<i class="fas fa-share-alt" style="color: #f59e0b; margin-right: 8px;"></i>共享管理';
             dialog.appendChild(title);
-            
+
             // 创建者
             const ownerSection = document.createElement('div');
             ownerSection.style.marginBottom = '20px';
             ownerSection.innerHTML = '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">创建者</div>';
-            
+
             const ownerBox = document.createElement('div');
             ownerBox.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px;';
-            
+
             const ownerImg = document.createElement('img');
             ownerImg.src = 'https://github.com/' + encodeURIComponent(todo.user_login || 'ghost') + '.png?size=40';
             ownerImg.style.cssText = 'width: 32px; height: 32px; border-radius: 50%;';
             ownerImg.onerror = function() { this.src = 'https://github.com/ghost.png?size=40'; };
-            
+
             const ownerName = document.createElement('span');
             ownerName.style.fontWeight = '500';
             ownerName.textContent = todo.user_login || '未知';
-            
+
             ownerBox.appendChild(ownerImg);
             ownerBox.appendChild(ownerName);
             ownerSection.appendChild(ownerBox);
             dialog.appendChild(ownerSection);
-            
+
             // 已共享列表
             const sharesSection = document.createElement('div');
             sharesSection.style.marginBottom = '20px';
             sharesSection.innerHTML = '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">已共享给</div>';
-            
+
             const sharesContainer = document.createElement('div');
             sharesContainer.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
-            
+
             if (shares.length > 0) {
                 shares.forEach(s => {
                     const shareItem = document.createElement('div');
                     shareItem.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 8px;';
-                    
+
                     const userInfo = document.createElement('div');
                     userInfo.style.cssText = 'display: flex; align-items: center; gap: 10px;';
-                    
+
                     const userImg = document.createElement('img');
                     const sharedUser = s.shared_with_login || s.shared_with_id || 'ghost';
                     userImg.src = 'https://github.com/' + encodeURIComponent(sharedUser) + '.png?size=40';
                     userImg.style.cssText = 'width: 32px; height: 32px; border-radius: 50%;';
                     userImg.onerror = function() { this.src = 'https://github.com/ghost.png?size=40'; };
-                    
+
                     const userName = document.createElement('span');
                     userName.textContent = sharedUser;
-                    
+
                     userInfo.appendChild(userImg);
                     userInfo.appendChild(userName);
                     shareItem.appendChild(userInfo);
-                    
+
                     if (isOwner) {
                         const removeBtn = document.createElement('button');
                         removeBtn.innerHTML = '<i class="fas fa-trash" style="color: #ff6b6b;"></i>';
@@ -2276,68 +2674,68 @@ export async function todoPage(request, env) {
                         removeBtn.onclick = () => removeShare(todoId, s.shared_with_id);
                         shareItem.appendChild(removeBtn);
                     }
-                    
+
                     sharesContainer.appendChild(shareItem);
                 });
             } else {
                 sharesContainer.innerHTML = '<div style="color: #999; font-size: 14px; padding: 10px;">暂无共享</div>';
             }
-            
+
             sharesSection.appendChild(sharesContainer);
             dialog.appendChild(sharesSection);
-            
+
             // 添加共享区域（仅创建者）
             if (isOwner) {
                 const addSection = document.createElement('div');
                 addSection.style.cssText = 'border-top: 1px solid #eee; padding-top: 20px;';
                 addSection.innerHTML = '<div style="font-size: 14px; color: #666; margin-bottom: 10px;">添加共享</div>';
-                
+
                 const inputRow = document.createElement('div');
                 inputRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px;';
-                
+
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.id = 'new-share-input';
                 input.placeholder = '输入 GitHub 用户名';
                 input.style.cssText = 'flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;';
-                
+
                 const verifyBtn = document.createElement('button');
                 verifyBtn.innerHTML = '<i class="fas fa-search"></i> 验证';
                 verifyBtn.style.cssText = 'padding: 10px 15px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer;';
-                
+
                 inputRow.appendChild(input);
                 inputRow.appendChild(verifyBtn);
                 addSection.appendChild(inputRow);
-                
+
                 const verifyResult = document.createElement('div');
                 verifyResult.id = 'user-verify-result';
                 verifyResult.style.marginBottom = '10px';
                 addSection.appendChild(verifyResult);
-                
+
                 const addConfirmBtn = document.createElement('button');
                 addConfirmBtn.innerHTML = '<i class="fas fa-user-plus"></i> 添加共享';
                 addConfirmBtn.disabled = true;
                 addConfirmBtn.style.cssText = 'width: 100%; padding: 12px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: not-allowed;';
                 addSection.appendChild(addConfirmBtn);
-                
+
                 dialog.appendChild(addSection);
-                
+
                 // 验证功能
                 let verifiedUser = null;
-                
+
                 verifyBtn.addEventListener('click', async () => {
                     const username = input.value.trim();
                     if (!username) {
                         verifyResult.innerHTML = '<span style="color: #ff6b6b;">请输入用户名</span>';
                         return;
                     }
-                    
+
                     verifyResult.innerHTML = '<span style="color: #666;">验证中...</span>';
                     const user = await verifyGitHubUser(username);
-                    
+
                     if (user) {
                         verifiedUser = user;
-                        verifyResult.innerHTML = 
+                        verifyResult.innerHTML =
                             '<div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #e8f5e9; border-radius: 8px;">' +
                                 '<img src="' + user.avatar_url + '" style="width: 40px; height: 40px; border-radius: 50%;">' +
                                 '<div>' +
@@ -2354,23 +2752,23 @@ export async function todoPage(request, env) {
                         addConfirmBtn.style.cssText = 'width: 100%; padding: 12px; background: #ccc; color: white; border: none; border-radius: 8px; cursor: not-allowed;';
                     }
                 });
-                
+
                 // 添加共享
                 addConfirmBtn.addEventListener('click', async () => {
                     if (!verifiedUser) return;
-                    
+
                     addConfirmBtn.disabled = true;
                     addConfirmBtn.innerHTML = '添加中...';
-                    
+
                     try {
                         const response = await fetch('/api/todos/' + todoId + '/share', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ shared_with_login: verifiedUser.login })
                         });
-                        
+
                         const data = await response.json();
-                        
+
                         if (data.success) {
                             showToast('共享成功！');
                             overlay.remove();
@@ -2392,31 +2790,31 @@ export async function todoPage(request, env) {
                 noPermMsg.textContent = '只有创建者可以管理共享';
                 dialog.appendChild(noPermMsg);
             }
-            
+
             // 关闭按钮
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '关闭';
             closeBtn.style.cssText = 'width: 100%; margin-top: 15px; padding: 12px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer;';
             closeBtn.onclick = () => overlay.remove();
             dialog.appendChild(closeBtn);
-            
+
             overlay.appendChild(dialog);
             document.body.appendChild(overlay);
         }
-        
+
         // 移除共享
         window.removeShare = async function(todoId, userId) {
             if (!confirm('确定要取消对该用户的共享吗？')) {
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/todos/' + todoId + '/share/' + encodeURIComponent(userId), {
                     method: 'DELETE'
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showToast('已取消共享');
                     // 刷新对话框
@@ -2430,10 +2828,34 @@ export async function todoPage(request, env) {
                 showToast('取消共享失败: ' + e.message, 'error');
             }
         }
-        
+
         // 旧的共享函数（保留兼容）
         async function shareTodo(id) {
             openShareDialog(id);
+        }
+
+        // Header 折叠/展开功能
+        function toggleHeaderCollapse() {
+            const header = document.getElementById('main-header');
+            if (!header) return;
+
+            const isCollapsed = header.classList.toggle('collapsed');
+            localStorage.setItem('todo_header_collapsed', isCollapsed ? '1' : '0');
+            console.log('[Header] 状态:', isCollapsed ? '已收起' : '已展开');
+        }
+
+        // 初始化 Header 折叠状态
+        function initHeaderCollapseState() {
+            const header = document.getElementById('main-header');
+            if (!header) return;
+
+            const savedState = localStorage.getItem('todo_header_collapsed');
+            if (savedState === '1') {
+                header.classList.add('collapsed');
+                console.log('[Header] 恢复收起状态');
+            } else {
+                console.log('[Header] 恢复展开状态');
+            }
         }
     </script>
 </body>

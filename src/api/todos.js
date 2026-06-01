@@ -1,6 +1,23 @@
 import { jsonResponse } from '../utils/response.js'
 import { getSession } from '../auth/session.js'
 
+// 将 UTC 时间转换为东8区（Asia/Shanghai）时间字符串
+function toShanghaiTime(utcDateStr) {
+  if (!utcDateStr) return utcDateStr;
+  const date = new Date(utcDateStr);
+  // 使用 toLocaleString 转换为东8区时间
+  return date.toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).replace(/\//g, '-');
+}
+
 export async function apiTodos(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -115,6 +132,7 @@ export async function apiTodos(request, env) {
               ...todo,
               tags: todo.tags ? JSON.parse(todo.tags) : [],
               attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+              created_at: toShanghaiTime(todo.created_at),
               isShared: true,
               sharedBy: todo.shared_by_id,
               shares: shares
@@ -161,6 +179,7 @@ export async function apiTodos(request, env) {
               ...todo,
               tags: todo.tags ? JSON.parse(todo.tags) : [],
               attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+              created_at: toShanghaiTime(todo.created_at),
               isSharedByMe: true,
               shares: shares
             };
@@ -233,6 +252,7 @@ export async function apiTodos(request, env) {
             ...todo,
             tags: todo.tags ? JSON.parse(todo.tags) : [],
             attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+            created_at: toShanghaiTime(todo.created_at),
             isShared: false,
             sharedBy: null,
             shares: shares
@@ -281,6 +301,7 @@ export async function apiTodos(request, env) {
             ...todo,
             tags: todo.tags ? JSON.parse(todo.tags) : [],
             attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+            created_at: toShanghaiTime(todo.created_at),
             isShared: true,
             sharedBy: todo.shared_by_id,
             shares: shares
@@ -386,6 +407,7 @@ export async function apiTodos(request, env) {
       if (todo) {
         todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
         todo.attachments = todo.attachments ? JSON.parse(todo.attachments) : [];
+        todo.created_at = toShanghaiTime(todo.created_at);
       }
 
       return jsonResponse({ success: true, todo });
@@ -413,10 +435,10 @@ export async function apiTodos(request, env) {
         if (todoOwner === currentUserId) {
           hasPermission = true;
         } else {
-          // 检查是否是共享接收者
+          // 检查是否是共享接收者（支持 shared_with_id 和 shared_with_login 两种匹配方式）
           const shareCheck = await env.DB.prepare(
-            'SELECT * FROM todo_shares WHERE todo_id = ? AND shared_with_id = ?'
-          ).bind(id, currentUser.id).all();
+            'SELECT * FROM todo_shares WHERE todo_id = ? AND (shared_with_id = ? OR shared_with_login = ?)'
+          ).bind(id, currentUser.id.toString(), currentUser.login).all();
           if (shareCheck.results?.length > 0) {
             hasPermission = true;
           }
@@ -444,6 +466,7 @@ export async function apiTodos(request, env) {
       if (todo) {
         todo.tags = todo.tags ? JSON.parse(todo.tags) : [];
         todo.attachments = todo.attachments ? JSON.parse(todo.attachments) : [];
+        todo.created_at = toShanghaiTime(todo.created_at);
       }
 
       return jsonResponse({ success: true, todo });
@@ -586,17 +609,40 @@ export async function apiTodos(request, env) {
       });
     }
 
-    // GET /api/todos/export - 导出所有待办为 JSON 文件
+    // GET /api/todos/export - 导出当前用户的所有待办为 JSON 文件
     if (method === 'GET' && path === '/api/todos/export') {
-      const result = await env.DB.prepare('SELECT * FROM todos ORDER BY created_at DESC').all();
+      // 检查是否登录
+      if (!currentUser) {
+        return jsonResponse({ success: false, error: '请先登录后再导出数据' }, 401);
+      }
+
+      // 只查询当前用户的待办（包括自己创建的 + 共享给我的）
+      const result = await env.DB.prepare(`
+        SELECT t.* FROM todos t
+        WHERE t.user_login = ? OR (t.user_login IS NULL AND t.user_id = ?)
+        UNION
+        SELECT t.* FROM todos t
+        INNER JOIN todo_shares ts ON t.id = ts.todo_id
+        WHERE ts.shared_with_id = ? OR ts.shared_with_login = ?
+        ORDER BY created_at DESC
+      `).bind(currentUser.login, currentUser.id, currentUser.id.toString(), currentUser.login).all();
+
       const todos = (result.results || []).map(todo => ({
         ...todo,
-        tags: todo.tags ? JSON.parse(todo.tags) : []
+        tags: todo.tags ? JSON.parse(todo.tags) : [],
+        attachments: todo.attachments ? JSON.parse(todo.attachments) : [],
+        created_at: toShanghaiTime(todo.created_at)
       }));
 
       // 生成导出数据
       const exportData = {
         exportTime: new Date().toISOString(),
+        user: {
+          id: currentUser.id,
+          login: currentUser.login,
+          name: currentUser.name,
+          email: currentUser.email
+        },
         totalCount: todos.length,
         completedCount: todos.filter(t => t.done).length,
         pendingCount: todos.filter(t => !t.done).length,
@@ -608,7 +654,7 @@ export async function apiTodos(request, env) {
 
       // 生成文件名
       const dateStr = new Date().toISOString().split('T')[0];
-      const filename = `todos-export-${dateStr}.json`;
+      const filename = `todos-export-${currentUser.login}-${dateStr}.json`;
 
       return new Response(blob, {
         status: 200,

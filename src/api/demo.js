@@ -160,7 +160,7 @@ export function apiCounter(request, env) {
   return jsonResponse({ count: memoryStore.counter });
 }
 
-export function apiShorten(request, env) {
+export async function apiShorten(request, env) {
   const url = new URL(request.url);
   const longUrl = url.searchParams.get('url');
   
@@ -168,22 +168,47 @@ export function apiShorten(request, env) {
     return jsonResponse({ error: '请提供 url 参数' }, 400);
   }
   
-  const shortCode = Math.random().toString(36).substring(2, 8);
-  memoryStore.shortUrls.set(shortCode, longUrl);
+  // 验证 URL 格式
+  try {
+    new URL(longUrl);
+  } catch (e) {
+    return jsonResponse({ error: '无效的 URL 格式' }, 400);
+  }
   
-  return jsonResponse({
-    original: longUrl,
-    short: `${url.origin}/s/${shortCode}`,
-    code: shortCode
-  });
+  // 生成短码
+  const shortCode = Math.random().toString(36).substring(2, 8);
+  
+  // 存储到 KV
+  try {
+    await env.CACHE.put(`short:${shortCode}`, longUrl, {
+      expirationTtl: 365 * 24 * 60 * 60 // 365天过期
+    });
+    
+    return jsonResponse({
+      success: true,
+      original: longUrl,
+      short: `${url.origin}/s/${shortCode}`,
+      code: shortCode
+    });
+  } catch (e) {
+    return jsonResponse({ 
+      error: '创建短链接失败',
+      message: e.message 
+    }, 500);
+  }
 }
 
-export function redirectShortUrl(path, env) {
+export async function redirectShortUrl(path, env) {
   const shortCode = path.replace('/s/', '');
-  const longUrl = memoryStore.shortUrls.get(shortCode);
   
-  if (longUrl) {
-    return Response.redirect(longUrl, 302);
+  try {
+    const longUrl = await env.CACHE.get(`short:${shortCode}`);
+    
+    if (longUrl) {
+      return Response.redirect(longUrl, 302);
+    }
+    return notFound();
+  } catch (e) {
+    return notFound();
   }
-  return notFound();
 }

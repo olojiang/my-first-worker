@@ -96,7 +96,7 @@ export async function authCallback(request, env) {
     },
     accessToken,
     loggedInAt: Date.now(),
-  }, 86400); // 24 小时
+  }, 2592000); // 30 天
   
   // 重定向到 todo 页面
   return new Response(null, {

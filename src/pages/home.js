@@ -359,13 +359,22 @@ export async function homePage(request, env) {
             fetchData('/api/weather?city=' + encodeURIComponent(city), 'weather-result');
         }
         
-        async function createShortUrl() {
+        window.createShortUrl = async function() {
             const url = document.getElementById('long-url').value;
             const resultBox = document.getElementById('shorturl-result');
+            if (!url) {
+                resultBox.textContent = '错误: 请输入 URL';
+                return;
+            }
+            resultBox.textContent = '创建中...';
             try {
                 const response = await fetch('/api/shorten?url=' + encodeURIComponent(url));
                 const data = await response.json();
-                resultBox.textContent = JSON.stringify(data, null, 2);
+                if (data.success) {
+                    resultBox.innerHTML = '短链接: <a href="' + data.short + '" target="_blank">' + data.short + '</a><br>原链接: ' + data.original;
+                } else {
+                    resultBox.textContent = '错误: ' + (data.error || '未知错误');
+                }
             } catch (e) {
                 resultBox.textContent = '错误: ' + e.message;
             }
@@ -423,7 +432,7 @@ export async function homePage(request, env) {
             try {
                 const response = await fetch('/api/ai?prompt=' + encodeURIComponent(prompt));
                 const data = await response.json();
-                resultBox.textContent = '问题: ' + data.prompt + '\n\n回答: ' + data.response;
+                resultBox.textContent = '问题: ' + data.prompt + String.fromCharCode(10, 10) + '回答: ' + data.response;
             } catch (e) {
                 resultBox.textContent = '错误: ' + e.message;
             }
