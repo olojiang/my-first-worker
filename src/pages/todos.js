@@ -2163,7 +2163,7 @@ export async function todoPage(request, env) {
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;';
 
             const dialog = document.createElement('div');
-            dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;';
+            dialog.style.cssText = 'background: white; border-radius: 16px; padding: 20px; width: 80%; max-width: 800px; max-height: 80vh; overflow-y: auto;';
 
             // 渲染标签选择
             function renderEditTags() {
@@ -2188,8 +2188,12 @@ export async function todoPage(request, env) {
                 return tagsHtml;
             }
 
+            // 从 localStorage 加载保存的编辑框高度
+            const savedEditHeight = localStorage.getItem('todo_edit_input_height');
+            const editTextareaHeight = savedEditHeight ? parseInt(savedEditHeight, 10) + 'px' : '120px';
+
             dialog.innerHTML = '<h3 style="margin: 0 0 15px 0; color: #333;">编辑待办</h3>' +
-                '<textarea id="edit-textarea" style="width: 100%; min-height: 120px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="输入待办内容...">' + escapeHtml(todo.text) + '</textarea>' +
+                '<textarea id="edit-textarea" style="width: 100%; min-height: 80px; height: ' + editTextareaHeight + '; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="输入待办内容...">' + escapeHtml(todo.text) + '</textarea>' +
                 '<div id="edit-tags-container">' + renderEditTags() + '</div>' +
                 '<div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">' +
                     '<mdui-button id="edit-cancel" variant="outlined">取消</mdui-button>' +
@@ -2226,11 +2230,43 @@ export async function todoPage(request, env) {
             });
 
             const textarea = dialog.querySelector('#edit-textarea');
+
+            // 监听编辑框高度变化并保存
+            let editHeightObserver = null;
+            const saveEditHeight = () => {
+                const height = textarea.offsetHeight;
+                if (height >= 80 && height <= 800) {
+                    localStorage.setItem('todo_edit_input_height', height.toString());
+                    console.log('[编辑框] 已保存高度:', height + 'px');
+                }
+            };
+
+            // 使用 ResizeObserver 监听高度变化
+            if (window.ResizeObserver) {
+                editHeightObserver = new ResizeObserver((entries) => {
+                    for (const entry of entries) {
+                        const height = entry.contentRect.height;
+                        if (height >= 80 && height <= 800) {
+                            localStorage.setItem('todo_edit_input_height', Math.round(height).toString());
+                        }
+                    }
+                });
+                editHeightObserver.observe(textarea);
+            } else {
+                // 降级方案：监听 mouseup 事件（拖拽 resize 结束后）
+                textarea.addEventListener('mouseup', saveEditHeight);
+            }
+
             textarea.focus();
             textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
             // 取消按钮
             dialog.querySelector('#edit-cancel').addEventListener('click', () => {
+                // 清理 ResizeObserver
+                if (editHeightObserver) {
+                    editHeightObserver.disconnect();
+                    editHeightObserver = null;
+                }
                 document.body.removeChild(overlay);
             });
 
@@ -2247,6 +2283,11 @@ export async function todoPage(request, env) {
                 const tagsChanged = JSON.stringify(editTags.sort()) !== JSON.stringify((todo.tags || []).sort());
 
                 if (!textChanged && !tagsChanged) {
+                    // 清理 ResizeObserver
+                    if (editHeightObserver) {
+                        editHeightObserver.disconnect();
+                        editHeightObserver = null;
+                    }
                     document.body.removeChild(overlay);
                     return;
                 }
@@ -2268,6 +2309,11 @@ export async function todoPage(request, env) {
                         if (tagsChanged) todo.tags = editTags;
                         renderTodos();
                         showToast('编辑成功！');
+                        // 清理 ResizeObserver
+                        if (editHeightObserver) {
+                            editHeightObserver.disconnect();
+                            editHeightObserver = null;
+                        }
                         document.body.removeChild(overlay);
                     } else {
                         showToast(data.error || '编辑失败', 'error');
