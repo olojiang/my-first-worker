@@ -17,9 +17,18 @@ export async function apiTags(request, env) {
   const KV_KEY = `tags:${userId}:${userLogin}`;
   
   const TAG_COLORS = [
-    '#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff',
-    '#5f27cd', '#00d2d3', '#1dd1a1', '#ff9f43', '#ee5a24',
-    '#009432', '#0652dd', '#9980fa', '#f368e0', '#ff4757'
+    // 红粉橙
+    '#ff6b6b', '#ff4757', '#ee5a24', '#ff9f43', '#ff9ff3', '#f368e0',
+    // 黄色色阶
+    '#d4ac0d', '#f1c40f', '#feca57', '#f9e79f',
+    // 绿色色阶
+    '#145a32', '#009432', '#27ae60', '#1dd1a1', '#58d68d', '#a9dfbf',
+    // 蓝色色阶
+    '#154360', '#0652dd', '#2e86c1', '#54a0ff', '#48dbfb', '#aed6f1',
+    // 紫青
+    '#5f27cd', '#9980fa', '#00d2d3',
+    // 灰阶
+    '#4b4b4b', '#8395a7', '#c8d0d8', '#ecf0f1'
   ];
   
   function assignColor(existingTags) {

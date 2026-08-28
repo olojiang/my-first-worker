@@ -1763,9 +1763,9 @@ export async function todoPage(request, env) {
                 const isSelected = filterTags.includes(tagName);
 
                 if (isSelected) {
-                    html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + '; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                    html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: ' + tagTextColor(tagColor) + '; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + '; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 } else if (tagColor) {
-                    html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: white; border: 1px solid transparent; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                    html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: ' + tagTextColor(tagColor) + '; border: 1px solid transparent; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 } else {
                     html += '<span onclick="toggleFilterTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 }
@@ -1867,9 +1867,9 @@ export async function todoPage(request, env) {
 
                 if (isSelected) {
                     // 选中状态：使用标签原本的颜色，添加白色边框
-                    html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: white; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + '; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                    html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + (tagColor || 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)') + '; color: ' + tagTextColor(tagColor) + '; border: 2px solid white; box-shadow: 0 0 0 2px ' + (tagColor || '#ff6b6b') + '; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 } else if (tagColor) {
-                    html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: white; border: 1px solid transparent; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
+                    html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: ' + tagColor + '; color: ' + tagTextColor(tagColor) + '; border: 1px solid transparent; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 } else {
                     html += '<span onclick="toggleTag(' + JSON.stringify(tagName).replace(/"/g, '&quot;') + ')" style="padding: 4px 12px; border-radius: 15px; font-size: 12px; cursor: pointer; background: #f0f0f0; color: #666; border: 1px solid #ddd; margin-right: 8px;">' + escapeHtml(tagName) + '</span>';
                 }
@@ -2035,7 +2035,7 @@ export async function todoPage(request, env) {
                         const tagObj = allTags.find(t => (typeof t === 'object' ? t.name : t) === tagName);
                         const tagColor = tagObj && typeof tagObj === 'object' ? tagObj.color : null;
                         const bgStyle = tagColor ? 'background: ' + tagColor + ';' : 'background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);';
-                        tagsHtml += '<span style="padding: 2px 8px; ' + bgStyle + ' color: white; border-radius: 10px; font-size: 11px;">' + escapeHtml(tagName) + '</span>';
+                        tagsHtml += '<span style="padding: 2px 8px; ' + bgStyle + ' color: ' + tagTextColor(tagColor) + '; border-radius: 10px; font-size: 11px;">' + escapeHtml(tagName) + '</span>';
                     });
                     tagsHtml += '</div>';
                 }
@@ -2601,6 +2601,17 @@ export async function todoPage(request, env) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // 浅色背景配深色文字，深色背景配白色文字
+        function tagTextColor(hex) {
+            if (!hex || typeof hex !== 'string' || hex.charAt(0) !== '#') return 'white';
+            let h = hex.slice(1);
+            if (h.length === 3) h = h.split('').map(c => c + c).join('');
+            if (h.length !== 6) return 'white';
+            const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+            if (isNaN(r) || isNaN(g) || isNaN(b)) return 'white';
+            return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#333' : 'white';
         }
 
         // 导出待办数据
