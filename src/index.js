@@ -2,6 +2,7 @@ import { authLogin, authCallback, authLogout, apiMe } from './auth/oauth.js';
 import { getSession } from './auth/session.js';
 import { apiTodos } from './api/todos.js';
 import { apiTags } from './api/tags.js';
+import { apiKvAdmin } from './api/kv-admin.js';
 import { apiUpload, apiAttachments } from './api/upload.js';
 import { apiAI, apiAIOptimize, apiAIGeneral } from './api/ai.js';
 import { apiTime, apiWeather, apiCounter, counterPage, apiShorten, redirectShortUrl } from './api/demo.js';
@@ -9,6 +10,7 @@ import { apiTestAll, apiKV, apiD1, apiR2, apiResources } from './api/storage.js'
 import { homePage } from './pages/home.js';
 import { todoPage } from './pages/todos.js';
 import { tagsPage } from './pages/tags.js';
+import { kvPage } from './pages/kv.js';
 import { notFound } from './utils/response.js';
 
 export default {
@@ -27,6 +29,7 @@ export default {
     if (path === '/') return homePage(request, env);
     if (path === '/todos') return todoPage(request, env);
     if (path === '/tags') return tagsPage();
+    if (path === '/kv') return kvPage();
     
     // Demo API 路由
     if (path === '/api/time') return apiTime();
@@ -59,6 +62,11 @@ export default {
     // Tags API 路由 - 支持 /api/tags 和 /api/tags/:name
     if (path === '/api/tags' || path.startsWith('/api/tags/')) {
       return apiTags(request, env);
+    }
+
+    // KV 管理 API 路由
+    if (path === '/api/kv-admin') {
+      return apiKvAdmin(request, env);
     }
     
     // 短链接重定向
