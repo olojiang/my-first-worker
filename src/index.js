@@ -3,6 +3,7 @@ import { getSession } from './auth/session.js';
 import { apiTodos } from './api/todos.js';
 import { apiTags } from './api/tags.js';
 import { apiKvAdmin } from './api/kv-admin.js';
+import { apiD1Admin } from './api/d1-admin.js';
 import { apiUpload, apiAttachments } from './api/upload.js';
 import { apiAI, apiAIOptimize, apiAIGeneral } from './api/ai.js';
 import { apiTime, apiWeather, apiCounter, counterPage, apiShorten, redirectShortUrl } from './api/demo.js';
@@ -11,6 +12,7 @@ import { homePage } from './pages/home.js';
 import { todoPage } from './pages/todos.js';
 import { tagsPage } from './pages/tags.js';
 import { kvPage } from './pages/kv.js';
+import { d1Page } from './pages/d1.js';
 import { notFound } from './utils/response.js';
 
 export default {
@@ -30,6 +32,7 @@ export default {
     if (path === '/todos') return todoPage(request, env);
     if (path === '/tags') return tagsPage();
     if (path === '/kv') return kvPage();
+    if (path === '/d1') return d1Page();
     
     // Demo API 路由
     if (path === '/api/time') return apiTime();
@@ -67,6 +70,11 @@ export default {
     // KV 管理 API 路由
     if (path === '/api/kv-admin') {
       return apiKvAdmin(request, env);
+    }
+
+    // D1 管理 API 路由
+    if (path === '/api/d1-admin') {
+      return apiD1Admin(request, env);
     }
     
     // 短链接重定向

@@ -185,9 +185,11 @@ export async function todoPage(request, env) {
 
         .header-tag-btn { right: 20px; }
         .header-kv-btn { right: 132px; }
+        .header-d1-btn { right: 205px; }
 
         .header.collapsed .header-tag-btn,
-        .header.collapsed .header-kv-btn {
+        .header.collapsed .header-kv-btn,
+        .header.collapsed .header-d1-btn {
             top: 50%;
             font-size: 12px;
             padding: 6px 12px;
@@ -705,6 +707,7 @@ export async function todoPage(request, env) {
             <div class="header-user-section">${userSection}</div>
             <a href="/tags" class="header-tag-btn"><i class="fas fa-tags"></i> 标签管理</a>
             <a href="/kv" class="header-kv-btn"><i class="fas fa-database"></i> KV</a>
+            <a href="/d1" class="header-d1-btn"><i class="fas fa-table"></i> D1</a>
             <mdui-button-icon onclick="showResourceInfo()" icon="info" class="header-info-btn"></mdui-button-icon>
             <button class="header-toggle-btn" id="header-toggle-btn" onclick="toggleHeaderCollapse()" title="收起/展开">
                 <i class="fas fa-chevron-up"></i>
