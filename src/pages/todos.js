@@ -170,7 +170,7 @@ export async function todoPage(request, env) {
             pointer-events: none;
         }
 
-        .header-tag-btn, .header-kv-btn {
+        .header-tag-btn, .header-kv-btn, .header-d1-btn {
             position: absolute;
             top: 30%;
             transform: translateY(-50%);
@@ -679,6 +679,15 @@ export async function todoPage(request, env) {
             .header h1 {
                 font-size: 24px;
             }
+
+            .header-tag-btn, .header-kv-btn, .header-d1-btn {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+
+            .header-tag-btn { right: 15px; }
+            .header-kv-btn { right: 108px; }
+            .header-d1-btn { right: 168px; }
 
             .input-group {
                 flex-direction: column;

@@ -53,6 +53,25 @@ export function kvPage() {
             gap: 5px;
         }
 
+        .switch-link {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+            transition: background 0.2s ease;
+        }
+
+        .switch-link:hover { background: rgba(255,255,255,0.28); }
+
         .container {
             max-width: 760px;
             margin: 0 auto;
@@ -254,6 +273,8 @@ export function kvPage() {
 
         @media (max-width: 480px) {
             .header h1 { font-size: 22px; }
+            .back-link { left: 12px; font-size: 13px; }
+            .switch-link { right: 12px; font-size: 12px; padding: 5px 10px; }
         }
     </style>
 </head>
@@ -261,6 +282,7 @@ export function kvPage() {
     <div class="header">
         <a href="/todos" class="back-link"><i class="fas fa-arrow-left"></i> 返回</a>
         <h1><i class="fas fa-database"></i> KV 管理</h1>
+        <a href="/d1" class="switch-link">D1 管理 <i class="fas fa-arrow-right"></i></a>
     </div>
 
     <div class="container">
